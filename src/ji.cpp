@@ -14,12 +14,17 @@
 
 #include "ji.h"
 #include "ji_license.h"
-#include "pubKey.hpp"
+#include "pubKey.hpp"  // 由一键sdk生成
 #include "cJSON.h"
 #include "BoostInterface.h"
 
 #include "encrypt_wrapper.hpp"
-#include "model_str.hpp"
+
+#include "model_str.hpp" 
+#include <glog/logging.h>
+#include "yolo.h"
+
+using namespace std;
 
 
 #define OPEN_PRINT 0
@@ -42,7 +47,6 @@ ji_calc_video_file
         CustomPredictor.runByFrame
 **
 */
-
 
 /* 自定义检测器示例 */
 /* 
@@ -67,35 +71,49 @@ public:
         pbtype = _pbtype;
         predictor = NULL;
 
+        /* 解析算法配置属性 /sdk/model/algo_config.json ??? */
+        m_draw_roi_area = 0;
+        m_draw_result   = 0;
+        m_show_result   = 0;
+        m_gpu_id        = 0;
+        m_threshold     = 0.1;
+        if (read_config("/usr/local/ev_sdk/model/algo_config.json") != true)
+        {
+            LOG(WARNING) << "parse config file failed!";
+        }
 
-        /* 解析算法配置属性 ./model/algo_config.json ??? */
-        
 
         /* 
-        ** 模块加解密 
+        ** 模块加解密 加密模块只对模型配置文件进行加密，不对模型文件加密，model_str.hpp是加密后的网络配置文件，
+           要解析该配置文件，需要修改相应框架加载模型的api源码
         for example:
-        ./3rd/bin/encrypt_model test_model.proto 01234567890123456789012345678988
+        对于darknet框架：
+        ./3rd/bin/encrypt_model yolov3.cfg 01234567890123456789012345678988
+        对于caffe框架：
+        ./3rd/bin/encrypt_model deploy.prototxt 01234567890123456789012345678988
         out file: model_str.hpp, copy this file to "./src" directory and add to ev_sdk project.
         **
         */
-        void* file = CreateEncryptor(model_str.c_str(), model_str.size(), key.c_str());
 
-        int fileLen = 0;
-        char *fileContent = (char*)FetchBuffer(file, fileLen);
+        // darknet 加密示例
+        // predictor = new yolo("/usr/local/ev_sdk/model/coco.data", 0.3);
+        
+        // void *decryptor = CreateEncryptor(model_str.c_str(), model_str.size(), key.c_str());
+        // int fileLen = 0;
+        // void *cfg_buff = FetchBuffer(decryptor, fileLen);
 
-        /* 输出解密后模型文件，实际开发时可屏蔽该行代码 ??? */
-        std::cout << "FetchBuffer:" << fileContent << std::endl;
+        // yolo *predictor_temp = (yolo*)predictor;
+        // predictor_temp->loadNetwork((char *)cfg_buff, "/usr/local/ev_sdk/model/yolov3.weights"); // 此接口修改了darknet框架加载模型源码
+
+        // DestroyEncrtptor(decryptor);
+
 
         /* allocate predictor ??? */
-        /* 
-        ** for example:
-        predictor = new Classifier(fileContent, 
-            "/usr/local/ev_sdk/model/model.dat", 
-            "104,117,123", 
-            "female,man,kid");
-        ** 
-        */
-        DestroyEncrtptor(file);
+        predictor = new yolo("/usr/local/ev_sdk/model/yolov3.cfg",
+                            "/usr/local/ev_sdk/model/yolov3.weights",
+                            "/usr/local/ev_sdk/model/coco.data",
+                            m_threshold, m_gpu_id);
+        
     }
 
     /* 反初化 */
@@ -104,7 +122,7 @@ public:
         /* destroy predictor */
         if (predictor)
         {
-            //delete (Classifier*)predictor;
+            delete (yolo*)predictor;
         }
     }
 
@@ -147,24 +165,90 @@ public:
         return JISDK_RET_SUCCEED;
     }
 
-private:    
+private:
+
+    bool read_config(const string& srcFile)
+    {
+        std::ifstream ifs(srcFile.c_str(),std::ifstream::binary);
+        if (!ifs.is_open())
+        {
+            LOG(ERROR) << "[ERROR] open config file failed:  " << srcFile;
+            return false;
+        }
+        
+        std::filebuf *fbuf = ifs.rdbuf();
+
+        //get file size
+        std::size_t size = fbuf->pubseekoff(0,ifs.end,ifs.in);
+        fbuf->pubseekpos(0,ifs.in);
+
+        //get file data
+        char* buffer = new char[size+1];
+        fbuf->sgetn(buffer,size);
+        ifs.close();
+        buffer[size] = '\0';
+
+        cJSON *jsonRoot = NULL, *sub;
+        bool bRet = false;
+        do 
+        {
+            jsonRoot = cJSON_Parse(buffer);
+            if (jsonRoot == NULL)
+            {
+                LOG(WARNING) << "parse config file failed:"<< buffer;
+                break;
+            }
+
+            sub = cJSON_GetObjectItem(jsonRoot, "draw_roi_area");
+            if (sub == NULL || sub->type != cJSON_Number)
+            {
+                LOG(WARNING) << "parse config file failed:"<< buffer;
+                break;
+            }
+            m_draw_roi_area = sub->valueint;
+
+            sub = cJSON_GetObjectItem(jsonRoot, "draw_result");
+            if (sub == NULL || sub->type != cJSON_Number)
+            {
+                LOG(WARNING) << "parse config file failed:"<< buffer;
+                break;
+            }
+            m_draw_result = sub->valueint;
+
+            sub = cJSON_GetObjectItem(jsonRoot,"show_result");
+            if (sub == NULL || (sub->type != cJSON_Number))
+            {
+                LOG(WARNING) << "parse config file failed:"<< buffer;
+                break;
+            }
+            m_show_result = sub->valueint;
+
+            sub = cJSON_GetObjectItem(jsonRoot, "gpu_id");
+            if (sub == NULL || sub->type != cJSON_Number)
+            {
+                LOG(WARNING) << "parse config file failed:"<< buffer;
+                break;
+            }
+            m_gpu_id = sub->valueint;
+            sub = cJSON_GetObjectItem(jsonRoot, "threshold");
+            if (sub == NULL || sub->type != cJSON_Number)
+            {
+                LOG(WARNING) << "parse config file failed:"<< buffer;
+                break;
+            }
+            m_threshold = sub->valuedouble;
+
+            bRet = true;
+        } while (0);
+
+        if (jsonRoot) cJSON_Delete(jsonRoot);
+        if (buffer) delete [] buffer;
+        return bRet;
+    }
+
     bool checkAlarm(const std::string& content) 
     {
         /* 判断是否报警 ??? */
-        
-        #if 0
-        /* 非报警类算法，请直接返回true */
-        #endif
-
-        
-        #if 0        
-        /* 实现方案1:     直接查找报警常量字符串--较偷赖的方式 */
-        return (content.find("\"alertFlag\": 1,") != std::string::npos);
-        #endif
-
-
-        #if 1
-        /* 实现方案2:     解析json--较安全正确的方式，建议选用 */
         cJSON *jsonRoot = cJSON_Parse(content.c_str());
         if (jsonRoot == NULL)
         {
@@ -180,29 +264,20 @@ private:
 
         cJSON_Delete(jsonRoot);
         return bRet;
-        #endif
 
-
-        #if 0
-        /* 实现方案3: calc函数调用算法时多个参数传出来--较高效的方式 */
-        #endif
     }
     
     /* 分析一帧 */
     bool runByFrame(const cv::Mat &inMat, const std::string &args, 
                         cv::Mat &outMat, std::string& strJson) 
     {
-        /* 
-        ** 注意规避修改源图inMat，算法分析请传destMat，绘制算法结果请在outMat上
-        ** 其中destMat指向outMat的roi区域
-        ** 1.当roi为空或无效时destMat与outMat指向同一张图 
-        ** 2.当roi有效时，注意请重新计算偏移位置并绘制算法结果
-        */
+        /* 规避修改源mat，算法操作请在destMat进行，其中destMat指向outMat即共享内存空间 */
         inMat.copyTo(outMat);
         cv::Mat destMat = outMat;
 
-        cv::Rect roiRect(0,0,0,0);
         /* 模拟args(roi)的处理 */
+        int shift_width  = 0;  // roi 相对原图的偏移坐标
+        int shift_height = 0;
         if (!args.empty())
         {   
             std::vector<cv::Point> v_point;
@@ -210,74 +285,93 @@ private:
             obj.parsePolygon(args.c_str(), outMat.size(), v_point);
             if (!v_point.empty())
             {
-                roiRect = obj.polygon2Rect(v_point);
-                destMat = outMat(roiRect);
+                cv::Rect roi = obj.polygon2Rect(v_point);
+                destMat = outMat(roi);
+                shift_width = roi.x;
+                shift_height = roi.y;
+            }
+
+            // roi显示
+            if (m_draw_roi_area)
+            {
+                int count = v_point.size();
+                cv::Point rook_points[1][count];
+                for(int j = 0; j < count; j++)
+                {
+                        rook_points[0][j] = v_point[j];
+                }
+
+                const cv::Point* ppt[] = { rook_points[0] };
+                int npt[] = {count};
+                cv::polylines(outMat, ppt, npt, 1, true, cv::Scalar(0, 255, 0), 3, 8, 0);
             }
         }
 
         /* 算法实现     ??? */
-        /* 以下代码模拟算法输出(空算法) */
-        /* 注意: 算法请使用destMat */
-        /* 
-        **for example:
-        Classifier * pc = (Classifier *)predictor;
-        std::vector<Prediction> predictions = pc->Classify(destMat);
-        **
-        */
+        VEC_TARGET det_vec;
+        yolo *predictor_temp =(yolo*)predictor;
+        predictor_temp->detect(destMat, det_vec);
         
-        /* 
-        ** 模拟算法返回的结果
-        ** json1,json2是算法返回的结果
-        ** 
-        */
-        const char json1[] = {
-            '{','\n',' ',' ',' ',' ','"','a','l','e','r','t','F','l','a','g',
-            '"',':',' ','0',',','\n',' ',' ',' ',' ','"','t','o','t','a','l',
-            'H','e','a','d','s','"',':',' ','1',',','\n',' ',' ',' ',' ','"',
-            'h','e','a','d','I','n','f','o','"',':',' ','[','\n',' ',' ',' ',
-            ' ',' ',' ',' ',' ','{','\n',' ',' ',' ',' ',' ',' ',' ',' ',' ',
-            ' ',' ',' ','"','x','"',':',' ','1','0',',','\n',' ',' ',' ',' ',
-            ' ',' ',' ',' ',' ',' ',' ',' ','"','y','"',':',' ','1','5',',',
-            '\n',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','"','w','i',
-            'd','t','h','"',':',' ','2','5',',','\n',' ',' ',' ',' ',' ',' ',
-            ' ',' ',' ',' ',' ',' ','"','h','e','i','g','h','t','"',':',' ',
-            '2','0',',','\n',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',
-            '"','h','a','v','e','H','e','l','m','e','t','"',':',' ','1','\n',
-            ' ',' ',' ',' ',' ',' ',' ',' ','}','\n',' ',' ',' ',' ',']','\n',
-            '}','\0'
-        };
+        // 解析成json格式
+        cJSON *root, *js_body, *js_list;
+        root = cJSON_CreateObject();
+        if (det_vec.size() > 0)
+	    {   
+            cJSON_AddItemToObject(root, "alertFlag", cJSON_CreateNumber(1));
+            cJSON_AddItemToObject(root,"detectInfo", js_body = cJSON_CreateArray());
+            int count = det_vec.size();
+            for (int i = 0; i < count; ++i)
+            {
+                det_vec[i].rect.x += shift_width;
+                det_vec[i].rect.y += shift_height;
+                cJSON_AddItemToArray(js_body, js_list = cJSON_CreateObject());
+                cJSON_AddNumberToObject(js_list,"x",      det_vec[i].rect.x);
+                cJSON_AddNumberToObject(js_list,"y",      det_vec[i].rect.y);
+                cJSON_AddNumberToObject(js_list,"height", det_vec[i].rect.height);
+                cJSON_AddNumberToObject(js_list,"width",  det_vec[i].rect.width);
+                
+                // 检测结果显示
+                if (m_draw_result)
+                {
+                    cv::rectangle(outMat,  det_vec[i].rect, cv::Scalar(0,0,255),1,1,0);
+                    cv::putText(outMat,"object",cv::Point(det_vec[i].rect.x, det_vec[i].rect.y),cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 0,255),2,8,0);
+                }
 
-        const char json2[] = {
-            '{','\n',' ',' ',' ',' ','"','a','l','e','r','t','F','l','a','g',
-            '"',':',' ','1',',','\n',' ',' ',' ',' ','"','t','o','t','a','l',
-            'H','e','a','d','s','"',':',' ','2',',','\n',' ',' ',' ',' ','"',
-            'h','e','a','d','I','n','f','o','"',':',' ','[','\n',' ',' ',' ',
-            ' ',' ',' ',' ',' ','{','\n',' ',' ',' ',' ',' ',' ',' ',' ',' ',
-            ' ',' ',' ','"','x','"',':',' ','1','0',',','\n',' ',' ',' ',' ',
-            ' ',' ',' ',' ',' ',' ',' ',' ','"','y','"',':',' ','1','5',',',
-            '\n',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','"','w','i',
-            'd','t','h','"',':',' ','2','5',',','\n',' ',' ',' ',' ',' ',' ',
-            ' ',' ',' ',' ',' ',' ','"','h','e','i','g','h','t','"',':',' ',
-            '2','0',',','\n',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',
-            '"','h','a','v','e','H','e','l','m','e','t','"',':',' ','1','\n',
-            ' ',' ',' ',' ',' ',' ',' ',' ','}',',','\n',' ',' ',' ',' ',' ',
-            ' ',' ',' ','{','\n',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',
-            ' ','"','x','"',':',' ','3','0','0',',','\n',' ',' ',' ',' ',' ',
-            ' ',' ',' ',' ',' ',' ',' ','"','y','"',':',' ','5','0','0',',',
-            '\n',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','"','w','i',
-            'd','t','h','"',':',' ','1','5',',','\n',' ',' ',' ',' ',' ',' ',
-            ' ',' ',' ',' ',' ',' ','"','h','e','i','g','h','t','"',':',' ',
-            '2','0',',','\n',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',
-            '"','h','a','v','e','H','e','l','m','e','t','"',':',' ','0','\n',
-            ' ',' ',' ',' ',' ',' ',' ',' ','}','\n',' ',' ',' ',' ',']','\n',
-            '}','\0'
-        };
+            }
+            
+            cJSON_AddItemToObject(root, "message", cJSON_CreateString("object is being detected!"));
+            cJSON_AddItemToObject(root, "numOfFlameRects", cJSON_CreateNumber(count));
+        } 
+        else
+        {
+            cJSON_AddItemToObject(root, "alertFlag", cJSON_CreateNumber(0));
+            cJSON_AddItemToObject(root,"detectInfo", js_body = cJSON_CreateArray());
+            cJSON_AddItemToObject(root, "message", cJSON_CreateString("nothing is being detected!"));
+            cJSON_AddItemToObject(root, "numOfFlameRects", cJSON_CreateNumber(0));
+        }
 
-        /* 当roiRect生效时，重新计算偏移位置 +roiRect.x,+roiRect.y ??? */
-        /* 根据算法配置及算法返回结果，绘制输出结果 ??? */
-        /* outMat draw... */
+        char *out = cJSON_Print(root);
+        if (out)
+        {
+            strJson = out;
+            free(out);
+            out = NULL;
+        }
+        else
+        {
+             strJson = "";
+        }
         
-        strJson = (rand() % 2)?json1:json2;
+        if (root)
+            cJSON_Delete(root);
+        // 显示结果
+        if (m_show_result)
+        {
+            cv::imshow("result", outMat);
+            cv::waitKey(1);
+        }
+    
+        
         return true;
     }
     
@@ -287,6 +381,13 @@ private:
 
     cv::Mat mat;
     std::string json;
+ 
+    // 算法私有参数
+    int m_draw_roi_area;
+    int m_draw_result;
+    int m_show_result;
+    int m_gpu_id;
+    double m_threshold;       // 置信度
 };
 
 int ji_init(int argc, char **argv)
@@ -319,7 +420,7 @@ argv[3]: $version
     /* 
     ** 请替换算法的公钥
     for example:
-    ./3rd/license/v7/ev_codec -c pubKey.txt
+    ./3rd/license/v5/ev_license -c pubKey.txt
     ** 
     */
     return (ji_check_license(pubKey,argv[0], argv[1], qps>0?&qps:NULL, atoi(argv[3])) == EV_SUCCESS)?
@@ -539,9 +640,10 @@ int ji_calc_video_file(void *predictor, const char *infile, const char* args,
                     if (!vwriter.isOpened())
                     {
                         vwriter.open(outfile,
-                                    /*vcapture.get(cv::CAP_PROP_FOURCC)*/cv::VideoWriter::fourcc('x','2','6','4'),
+                                    vcapture.get(cv::CAP_PROP_FOURCC),
                                     vcapture.get(cv::CAP_PROP_FPS),
                                     outMat.size());
+                                    //cv::Size(outMat.cols,outMat.rows));
                         if (!vwriter.isOpened())
                         {
                             return JISDK_RET_FAILED;

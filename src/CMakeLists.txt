@@ -16,19 +16,24 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${SOURCE_DIR}/include
     ${SOURCE_DIR}/3rd/cJSON
-    ${SOURCE_DIR}/3rd/license/v7.1/include
+    ${SOURCE_DIR}/3rd/license/v7/include
     ${SOURCE_DIR}/3rd/boost_interface
     ${SOURCE_DIR}/3rd/encrypted_module-master/include
+    /usr/local/cuda/include
+    /usr/local/cuda-10.0/include
 )
 
 link_directories(
-    ${SOURCE_DIR}/3rd/license/v7.1/lib
+    ${SOURCE_DIR}/3rd/license/v7/lib
     ${SOURCE_DIR}/3rd/encrypted_module-master/lib
+    ${SOURCE_DIR}/lib
+    /usr/local/cuda/lib64
 )
 
 list(APPEND SRCS
     ${SOURCE_DIR}/3rd/cJSON/cJSON.c
     ${SOURCE_DIR}/3rd/boost_interface/BoostInterface.cpp
+    ${SOURCE_DIR}/src/yolo.cpp
     ${SOURCE_DIR}/src/ji.cpp
 )
 
@@ -38,5 +43,6 @@ target_link_libraries(${PROJECT_NAME}
     ji_license
     encrypt_wrapper
     m crypto
+    glog cuda cublas cudnn cudart curand darknet
 )
 

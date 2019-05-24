@@ -233,7 +233,7 @@ void test_for_ji_calc_frame()
                          if (!vwriter.isOpened())
                          {
                              vwriter.open(strOut,
-                                         /*vcapture.get(cv::CAP_PROP_FOURCC)*/cv::VideoWriter::fourcc('x','2','6','4'),
+                                         vcapture.get(cv::CAP_PROP_FOURCC),
                                          vcapture.get(cv::CAP_PROP_FPS),
                                          outMat.size());
                              if (!vwriter.isOpened())

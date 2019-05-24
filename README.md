@@ -1,7 +1,7 @@
 # 目录
 * [简介](#简介)
 * [ev_sdk目录结构](#ev_sdk目录结构)
-* [编译sdk](#编译sdk)
+* [编译sdk](#编译说明)
 * [测试sdk](#测试sdk)
 * [发布sdk](#发布sdk)
 
@@ -9,6 +9,7 @@
 * ev_sdk是极市算法sdk2.0标准的实现示例，一键sdk及专家模式均可以使用该示例作为实现模板；
 * 极市提供的算法docker镜像均提供该实现示例，请根据算法的产品需求选择对应docker镜像;
 * 请在docker container内开发及调试。
+* 模型文件太大，放在网盘内请自行下载，下载链接请见最下方，下载完后请放在model文件夹下。
 
 # ev_sdk目录结构
 
@@ -28,7 +29,7 @@
         ├── license.txt             # 本docker容器的授权码
         └── licenses.manifest	
 		
-    ├── lib             # 发布库文件目录，包括libji.so及其依赖的其它库文件，但不包括镜像本身提供的库(例如：openv,ffmpeg)
+    ├── lib             # 发布库文件目录，包括libji.so及其依赖的其它库文件，开发者如果需要用到其他库，统统放到该文件，比如本示例用到的libdarknet.so放在该目录
         ├── libji.so                # ev_sdk最终生成的库文件，有{../src}项目生成
         └──  ...                    # 其它依赖库 
     ├── include         # 发布库头文件目录
@@ -40,19 +41,19 @@
         ├── model.dat               # 模型文件
         └──  ...           	         
     ├── doc             # 文档目录，包括part4,5部分的文档均可放在此处
-    ├── 3rd             # 第三方源码或库目录，包括boost for wkt(roi),cJSON,license,enctry model，发布时需移除
+    ├── 3rd             # 第三方源码或库目录，包括boost for wkt(roi),cJSON,license,enctry model， 注意！！！开发者用到的其他库不要放在该目录
         ├── boost_interface         # boost for wkt(roi)
         ├── cJSON                   # c版json库,简单易用
         ├── license                 # sdk授权库,详见readme.docx
         └── encrypted_module-master # 模型加密库,详见README.md	
-	├── src             # libji.so源码目录，发布时需移除
+	├── src             # libji.so源码目录
 		                            CMakeLists.txt Makefile两者二选一
-        ├── CMakeLists.txt          # 仅用于示例，演示基于Makefile
+        ├── CMakeLists.txt          # 用于编译libji.so,本示例采用cmake方式编译，也可以选用makefile的方法编译
         ├── build                   # cmake临时目录
-        ├── Makefile                # makfile，编译成功后，会自动拷贝至{../bin}目录
+        ├── Makefile                # 本示例未采用该方法， 该文件用于编译libji.so 编译成功后，会自动拷贝至{../bin}目录
         ├── ji.cpp                  # libji.so实现示例[有开发者完善]
         └──  ...                    # 导入模型加密后会生成model_str.hpp文件;导入license后生成pubKey.hpp文件
-    ├── test            # 测试源码目录，该目录的文件，请不要修改，特别是Makefile。发布时建议手动编译下以确定是否缺少libji.so相关依赖库，发布时建议保留
+    ├── test            # 测试源码目录，该目录的文件，请不要修改，特别是Makefile。发布时建议手动编译下以确定是否缺少libji.so相关依赖库
         ├── Makefile                # 编译成功后，会自动拷贝至{../bin}目录
         ├── test.cpp                # libji.so测试实现，其中提供cJSON及jsoncpp使用示例，详见cJSON_sample及jsoncpp_sample函数
         └──  ...           
@@ -63,7 +64,7 @@
 * 第1步：将要实际生效的模型拷贝到 `/usr/local/ev_sdk/model`;
 * 第2步：模型加密，有更新才运行，例如：
 
- `./3rd/encrypted_module-master/encrypt_model 算法模型文件 您的aes密钥(可选参数--32个可见字符)`  
+ `./3rd/encrypted_module-master/encrypt_model 算法模型文件 您的aes密钥(32个可见字符)`  
  out file: ./3rd/encrypted_module-master/model_str.hpp, copy this file to "./src" directory .
  
 ## 编译
@@ -121,3 +122,6 @@
 	* CPU：登录[极市平台](http://amber.extremevision.com.cn)，点击我的算法，点击“+”，创建算法，填写相关信息，点击申请上架后，极市开始对算法进行测试审核。审核通过后算法将发布在极市算法市场。
 	
 ---
+#模型下载链接
+	链接：https://pan.baidu.com/s/17-9PUGE4kqmBI17z-INK7g 
+	提取码：2nli 

@@ -1,0 +1,1 @@
+{"version":7,"reference":"5626d037bfc0c5893a36f6aec4fd867ac42a95c16d75292b41ceff75696b44f9","disk_serial":"BTHH82931EYP256B","mac":"02:42:ac:11:00:03"}

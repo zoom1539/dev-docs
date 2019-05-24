@@ -32,6 +32,7 @@ extern "C"
 #define JISDK_PREDICTOR_SEQUENTIAL      (1)             //连续的,即带状态的
 #define JISDK_PREDICTOR_NONSEQUENTIAL   (2)             //非连续的,即不带状态的
 
+
 /* 分析输出code值定义 */
 #define JISDK_CODE_ALARM                (0)             //报警
 #define JISDK_CODE_NORMAL               (1)             //正常

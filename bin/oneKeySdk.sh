@@ -60,9 +60,12 @@ check_error "./ev_license -l privateKey.pem r.txt license.txt"
 
 #进入src路径，编译源码
 cd /usr/local/ev_sdk/src/
-make clean
-make -j
-check_error "make -j"
+if [ ! -d ./build ]
+    then
+        mkdir build
+fi
+cd build && cmake .. && make clean && make -j8
+check_error "make -j8"
 
 cd /usr/local/ev_sdk/test/
 make clean

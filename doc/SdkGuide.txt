@@ -1,0 +1,155 @@
+## 确认开发环境
+
+1. 根据自己需求，选择对应docker容器。
+2. 在对应docker内开发。
+
+## 编写sdk
+
+sdk目录结构：
+/usr/local/ev_sdk
+├── README.md       # 本帮助文档
+├── bin             # 发布运行目录
+    ├── onKeySdk.sh             # 一键生成sdk，包括生成算法密钥、编译sdk、编译test
+    ├── oneKeyTest.sh           # 一键测试，自动测试
+    ├── clearSrcCode.sh         # 开发完成后但在发布前，用于清除开发者源码等[有开发者补充完善]
+    ├── ev_codec                # 混编工具
+    ├── ev_license              # 授权工具
+    ├── test                    # sdk测试工具，有{../test}项目生成
+                                以下是onKeySdk.sh脚本生成的文件 
+    ├── privateKey.pem          # rsa私钥,请妥善保管，发布时请务必删除
+    ├── pubKey.pem              # rsa公钥
+    ├── r.tx                    # 本docker容器的参考码
+    ├── license.txt             # 本docker容器的授权码
+    └── licenses.manifest 
+
+├── lib             # 发布库文件目录，包括libji.so及其依赖的其它库文件，开发者如果需要用到其他库，统统放到该文件，比如本示例用到的libdarknet.so放在该目录
+    ├── libji.so                # ev_sdk最终生成的库文件，有{../src}项目生成
+    └──  ...                    # 其它依赖库 
+├── include         # 发布库头文件目录
+    └── ji.h        # libji.so的头文件，理论上仅有唯一一个头文件
+├── data            # 测试数据目录，例如开发者准备的测试图片或视频文件，其中视频文件尽量选择avi或mp4的封装格式及h264编码的文件
+├── model           # 模型及模型数据，导入模型加密功能后模型硬编码进ev_sdk，请参考{3rd/encrypted_module-master}目录下文件档
+                                以下文件有算法内部使用，除algo_config.json文件外其它文件名称不受限
+    ├── algo_config.json        # 算法配置文件，需要开发者补充实现
+    ├── model.dat               # 模型文件
+    └──  ...                       
+├── doc             # 文档目录，包括part4,5部分的文档均可放在此处
+├── 3rd             # 第三方源码或库目录，包括boost for wkt(roi),cJSON,license,enctry model， 注意！！！开发者用到的其他库不要放在该目录
+    ├── boost_interface         # boost for wkt(roi)
+    ├── cJSON                   # c版json库,简单易用
+    ├── license                 # sdk授权库,详见readme.docx
+    └── encrypted_module-master # 模型加密库,详见README.md 
+├── src             # libji.so源码目录
+                                CMakeLists.txt Makefile两者二选一
+    ├── CMakeLists.txt          # 仅用于示例，演示基于Makefile
+    ├── build                   # cmake临时目录
+    ├── Makefile                # makfile，编译成功后，会自动拷贝至{../bin}目录
+    ├── ji.cpp                  # libji.so实现示例[有开发者完善]
+    └──  ...                    # 导入模型加密后会生成model_str.hpp文件;导入license后生成pubKey.hpp文件
+├── test            # 测试源码目录，该目录的文件，请不要修改，特别是Makefile。发布时建议手动编译下以确定是否缺少libji.so相关依赖库
+    ├── Makefile                # 编译成功后，会自动拷贝至{../bin}目录
+    ├── test.cpp                # libji.so测试实现，其中提供cJSON及jsoncpp使用示例，详见cJSON_sample及jsoncpp_sample函数
+    └──  ...           
+└── ... 更多内容省略
+
+
+编写步骤：
+* 第一步：将模型拷贝到 `/usr/local/ev_sdk/model`;
+
+* 第二步：获取 `license`公钥和私钥
+	1. 方法一：一键sdk方式获取。按照标准编写好sdk后，在bin目录下运行 `sh oneKeySdk.sh`后会生成以下几个文件：
+       `sdk/bin/` 目录下：
+	     privateKey.pem  --私钥  每个算法有唯一私钥，只需要生成一次，后面生成sdk服务的时候需要填写
+	     pubKey.pem      --公钥  每个算法有唯一共钥，只需要生成一次，后面生成sdk服务的时候需要填写
+	     license.txt          --授权码，当前环境运行的唯一凭证，自测的时候需要，每个容器环境都有唯一的license
+	  sdk/include/下：
+	     license.hpp        --公钥c字符串，在ji.cpp中需要#include "license.hpp",在ji_init()接口中需要使用到。
+	2. 方法二：自己运行脚本生成
+包括以下几个步骤：
+
+		1. 进入路径3rd/license/v5，增加所有脚本的执行权限，并清除多余的信息，脚本示例如下：
+			cd 3rd/license/v5；chmod  +x  *；./clear.sh
+		2. 生成公钥和私钥，脚本示例：./generateRsaKey.sh
+		3. 生成摘要和生成 license，脚本示例如下，其中 r.txt为摘要，license.txt 为 license：
+			./ev_license -r r.txt； ./ev_license -l privateKey.pem r.txt license.txt
+		4. 将license拷贝到 sdk/bin下， 脚本示例：cp license.txt ../../../bin/
+		5. 转换公钥为c语言常量字符串，替换掉 ji.cpp 中 ji_init()接口里面的 pubKey字符串数组，
+			脚本示例如下：
+			./ev_codec -c pubKey.pem 
+		ps: 上述步骤中，如果运行失败，可能有两个原因：
+		  一是缺少相关依赖库，需要执行apt-get install nvme-cli dmidecode sg3-utils  
+		  二是拉镜像的时候没有带上私有权限参数  --privileged
+		  请联系相关人员处理。
+	  
+* 第三步：编写src
+
+第三方库介绍：
+		boost_interface：感兴趣区域相关接口，对于某些任务需要框出区域处理，比如检测任务。
+		cJSON：json格式处理工具类
+		encrypted_module-master：加密模块工具类
+		license：授权码工具类
+
+编写方式一：在样例标准文档的基础上修改（建议使用该方法）
+
+     在标准文档中有一个源文件`ji.cpp`，开发者主要实现一个自定义类，即`CustomPredictor`类，
+	 该类主要实现功能为：输入一张图片，输出json格式的最终结果。
+	 开发者主要实现`CustomPredictor::create()`,  `CustomPredictor::destroy()`,
+	`CustomPredictor::runByFrame()`这三个接口。三个接口介绍如下：
+	 
+    CustomPredictor::create()：用于创建一个实例，如创建一个分类的实例，需要注意的点：
+	第一：可以根据需要加载多个模型；
+	第二：加密一般在此处处理，以caffe为例，如果需要加密模型，需要在目录下/sdk/3rd/encrypted_module-master运行 
+	" ./encrypt_model model.cfg 01234567890123456789012345678988",
+	运行后会在当前目录生成model_str.hpp，然后将该文件拷贝到当前文件的include目录下，
+	在ji.cpp下包含该头文件，具体加密用法可以查看标准示例。
+	
+	CustomPredictor::destroy()：释放实例，释放内存等
+	
+	CustomPredictor::runByFrame()：处理一帧的主要流程接口，输入一张图片，输出json格式的最终结果。
+	写这个函数的时候需要注意几个点：
+	第一，不能改变输入图像，比如检测任务的需要画框，不能在输入图像中画，需要拷贝一份出来，
+	可这样处理 cv::srcMat = inMat.clone()；
+	第二，输出结果必须是json的格式；
+	第三，args是感兴趣区域处理的参数
+	
+编写方式二：自己实现相关接口
+
+	另外，开发者也可以重新自定义类替换`CustomPredictor`类，如果重写的话，需要重新实现几个全局函数，
+	包括`ji_create_predictor()`,  `ji_destroy_predictor()`, `ji_calc_frame()`, 
+	`ji_calc_buffer()`, `ji_calc_file()`,`ji_calc_video_file()`六个接口，实现方法可以参考标准示例。
+
+* 第四步：编译src
+    可以选择Makefile的方法和Cmake的方法编译src源码。
+	如果需要增加动态库，必须将动态库拷贝到 /sdk/lib/ 路径下；  如果增加了新模块，记得修改src中的Makefile文件，然后编译，编译成功会将libji.so动态库拷贝到上一层的lib目录里面。
+
+## 测试sdk
+ 进入test目录，test中的Makefile不允许修改，直接编译，测试，测试方法如下：
+ 运行./test --help,可输出使用帮助如下
+usage:
+  -h  --help        show help information
+  -f  --function    test function for 
+                    [1.ji_calc_frame,2.ji_calc_buffer,3.ji_calc_file,4.ji_calc_video_file]
+  -l  --license     license file. default: license.txt
+  -i  --infile      source file
+  -a  --args        for example roi
+  -o  --outfile     result file
+  -r  --repeat      number of repetitions. default: 1
+                    <= 0 represents an unlimited number of times
+                    for example: -r 100
+例如：
+./test -f 1 -i ../data/test_sub.jpg -o ../data/test_sub_out.jpg
+./test -f 2 -i ../data/test_sub.jpg -o ../data/test_sub_out.jpg -r -1
+./test -f 3 -i ../data/test_sub.jpg -o ../data/test_sub_out.jpg -r 10
+./test -f 4 -i ../data/test_sub.mp4 -o ../data/test_sub_out.mp4 -r 100
+
+## 发布sdk流程：
+	* 加载对应数据集，并创建虚拟机，如果没有对应数据集，需自己上传；
+	* 在线训练；
+	* 提交模型自动测试；
+	* 测试完成后，按流程提交模型测试：
+		 模型测试 -> 新建测试->刷新页面查看测试状态 ->模型测试结果通知后查看测试详情
+	* 测试通过后，按如下流程提交sdk:
+		生成服务 -> 专家模式 -> 填写表单 -> 点击提交
+		->刷新页面查看SDK生成状态 
+		->查看服务生成结果
+	* 显示发布成功即表示发布sdk完成！

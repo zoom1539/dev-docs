@@ -1,0 +1,8 @@
+classes= 80
+train  = /home/htp/darknet/scripts/VOCdevkit/VOC2007/train.txt
+#valid  = coco_testdev
+valid = data/coco_val_5k.list
+names = /usr/local/ev_sdk/model/coco.names
+backup = /home/htp/darknet/backup
+eval=coco
+

@@ -122,6 +122,6 @@
 	* CPU：登录[极市平台](http://amber.extremevision.com.cn)，点击我的算法，点击“+”，创建算法，填写相关信息，点击申请上架后，极市开始对算法进行测试审核。审核通过后算法将发布在极市算法市场。
 	
 ---
-#模型下载链接
+# 模型下载链接
 	链接：https://pan.baidu.com/s/17-9PUGE4kqmBI17z-INK7g 
 	提取码：2nli 

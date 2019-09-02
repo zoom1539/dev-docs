@@ -30,7 +30,4 @@ target_link_libraries(${PROJECT_NAME}
 )
 
 # libji.so
-install(
-        TARGETS ${PROJECT_NAME}
-        LIBRARY DESTINATION lib
-)
+install(TARGETS ${PROJECT_NAME} DESTINATION lib)

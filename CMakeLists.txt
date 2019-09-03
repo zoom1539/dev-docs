@@ -12,6 +12,7 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/3rd/cJSON)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/3rd/boost_interface)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/3rd/encrypted_module/)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/3rd/license/v10)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/sample-classifier)
 
 # libji.so
 add_library (${PROJECT_NAME} SHARED ${PROJECT_SOURCE_DIR}/src/ji.cpp)
@@ -29,5 +30,5 @@ target_link_libraries(${PROJECT_NAME}
         BoostInterface
 )
 
-# libji.so
+# install libji.so
 install(TARGETS ${PROJECT_NAME} DESTINATION lib)

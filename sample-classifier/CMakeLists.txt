@@ -1,4 +1,6 @@
-find_library(darknet NAMES darknet HINTS ${CMAKE_CURRENT_SOURCE_DIR}/darknet/lib)
+list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+
+find_package(Darknet REQUIRED)
 find_package(OpenCV REQUIRED)
 find_library(glog REQUIRED)
 
@@ -6,14 +8,14 @@ find_library(glog REQUIRED)
 add_library(ClassifierPredictor SHARED ${CMAKE_CURRENT_SOURCE_DIR}/src/ClassifierPredictor.cpp)
 target_link_libraries(ClassifierPredictor
         pthread
-        ${darknet}
+        ${darknet_LIBRARIES}
         ${OpenCV_LIBS}
         glog
         cjson
 )
 target_include_directories(ClassifierPredictor
         PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
-        PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/darknet/include
+        PUBLIC ${darknet_INCLUDE_DIRS}
         PRIVATE ${OpenCV_INCLUDE_DIR}
 )
 
@@ -28,3 +30,4 @@ target_link_libraries(classifier
 
 install(TARGETS classifier DESTINATION bin)
 install(TARGETS ClassifierPredictor DESTINATION lib)
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/darknet/lib/libdarknet.so DESTINATION lib)

@@ -28,6 +28,7 @@ target_link_libraries(${PROJECT_NAME}
         encrypt_wrapper
         cjson
         BoostInterface
+        ClassifierPredictor
 )
 
 # install libji.so

@@ -24,7 +24,9 @@
 
 #include <ClassifierPredictor.hpp>
 
+// 如果需要添加授权功能，请保留该宏定义，并在ji_init中实现授权校验
 #define ENABLE_AUTHORIZATION
+// 如果需要加密模型，请保留该宏定义，并在ji_create_predictor中实现模型解密
 #define ENABLE_MODEL_ENCRYPTION
 
 
@@ -120,6 +122,11 @@ void *ji_create_predictor(int pdtype) {
     // 获取解密后的字符串
     int fileLen = 0;
     model_struct_str = (char *) FetchBuffer(h, fileLen);
+    char *tmp = new char[fileLen + 1];
+    strncpy(tmp, model_struct_str, fileLen);
+    tmp[fileLen] = '\0';
+    model_struct_str = tmp;
+    LOG(INFO) << "Buffer len:" << fileLen;
     LOG(INFO) << "FetchBuffer:" << model_struct_str;
 
     // 获取解密后的文件句柄
@@ -127,7 +134,7 @@ void *ji_create_predictor(int pdtype) {
 
     DestroyEncrtptor(h);
 #else
-    // 使用默认的模型配置文件
+    // 不使用模型加密功能，直接从模型文件读取
     std::ifstream ifs = std::ifstream("/usr/local/ev_sdk/sample-classifier/model/tiny.cfg", std::ios::binary);
     ifs.seekg(0, std::ios_base::end);
     long len = ifs.tellg();
@@ -137,8 +144,8 @@ void *ji_create_predictor(int pdtype) {
     model_struct_str[len] = '\0';
 #endif
 
-    int iRet = predictor->init("/root/ev_sdk/sample-classifier/model/config/imagenet1k.data", model_struct_str,
-            "/root/ev_sdk/sample-classifier/model/tiny.weights");
+    int iRet = predictor->init("/usr/local/ev_sdk//sample-classifier/model/config/imagenet1k.data", model_struct_str,
+            "/usr/local/ev_sdk//sample-classifier/model/tiny.weights");
     if (iRet != ClassifierPredictor::INIT_OK) {
         return nullptr;
     }
@@ -168,12 +175,8 @@ int ji_calc_frame(void *predictor, const JI_CV_FRAME *inFrame, const char *args,
     cv::Mat outMat;
     int iRet = processMat(predictor, inMat, args, outMat, *event);
 
-    if (iRet == JISDK_RET_SUCCEED)
-    {
-        if ((event->code != JISDK_CODE_FAILED) &&
-            (!outMat.empty()) &&
-            (outframe))
-        {
+    if (iRet == JISDK_RET_SUCCEED) {
+        if ((event->code != JISDK_CODE_FAILED) && (!outMat.empty()) && (outframe)) {
             outframe->rows = outMat.rows;
             outframe->cols = outMat.cols;
             outframe->type = outMat.type();
@@ -230,4 +233,9 @@ int ji_calc_file(void *predictor, const char *inFile, const char *args, const ch
     }
 
     return iRet;
+}
+
+int ji_calc_video_file(void *predictor, const char *infile, const char* args,
+                       const char *outfile, const char *jsonfile) {
+    return JISDK_RET_SUCCEED;
 }

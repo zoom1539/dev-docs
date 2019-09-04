@@ -12,9 +12,8 @@
 ClassifierPredictor::ClassifierPredictor(): mNetworkPtr(NULL), mTop(5) {}
 
 int ClassifierPredictor::init(char *datacfg, const char *model_cfg_str, char *weightfile) {
-    LOG(INFO) << "Initing...";
-    mNetworkPtr = load_network_from_string(model_cfg_str, weightfile, 0);
     LOG(INFO) << "Loading model...";
+    mNetworkPtr = load_network_from_string(model_cfg_str, weightfile, 0);
     set_batch_network(mNetworkPtr, 1);
     srand(2222222);
 

@@ -106,7 +106,7 @@ void ji_destroy_predictor(void *predictor);
     event:     [必选参数] 输出参数,允许为NULL,输出结果;event->json有开发者创建和释放.
 返回参数    : 详见"函数返回值定义",成功返回JISDK_RET_SUCCEED,其它表示失败 
 *****************************************************************************/
-int ji_calc_frame(void *predictor, const JI_CV_FRAME *inframe, const char *args,
+int ji_calc_frame(void *predictor, const JI_CV_FRAME *inFrame, const char *args,
                   JI_CV_FRAME *outframe, JI_EVENT *event);
 
 
@@ -123,7 +123,7 @@ int ji_calc_frame(void *predictor, const JI_CV_FRAME *inframe, const char *args,
 返回参数    : 详见"函数返回值定义",成功返回JISDK_RET_SUCCEED,其它表示失败 
 *****************************************************************************/
 int ji_calc_buffer(void *predictor, const void *buffer, int length,
-                   const char *args, const char *outfile, JI_EVENT *event);
+                   const char *args, const char *outFile, JI_EVENT *event);
 
 /*
 函 数 名: ji_calc_file
@@ -136,8 +136,8 @@ int ji_calc_buffer(void *predictor, const void *buffer, int length,
    event:     [必选参数] 输出参数,允许为NULL,输出结果;event->json有开发者创建和释放.
 返回参数    : 详见"函数返回值定义",成功返回JISDK_RET_SUCCEED,其它表示失败 
 *****************************************************************************/
-int ji_calc_file(void *predictor, const char *infile, const char *args,
-                 const char *outfile, JI_EVENT *event);
+int ji_calc_file(void *predictor, const char *inFile, const char *args,
+                 const char *outFile, JI_EVENT *event);
 
 
 /*

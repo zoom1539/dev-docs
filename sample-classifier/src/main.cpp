@@ -11,7 +11,7 @@ int main(int argc, const char *argv[]) {
     ClassifierPredictor *predictor = new ClassifierPredictor();
 
     // Read model configuration file
-    std::ifstream ifs = std::ifstream("/root/ev_sdk/sample-classifier/model/tiny.cfg", std::ios::binary);
+    std::ifstream ifs = std::ifstream("/usr/local/ev_sdk/sample-classifier/model/tiny.cfg", std::ios::binary);
     ifs.seekg(0, std::ios_base::end);
     long len = ifs.tellg();
     char *model_str = new char[len + 1];
@@ -21,9 +21,9 @@ int main(int argc, const char *argv[]) {
     model_str[len] = '\0';
 
     // Init
-    predictor->init("/root/ev_sdk/sample-classifier/model/config/imagenet1k.data", model_str,
-                    "/root/ev_sdk/sample-classifier/model/tiny.weights");
+    predictor->init("/usr/local/ev_sdk/sample-classifier/model/config/imagenet1k.data", model_str,
+                    "/usr/local/ev_sdk/sample-classifier/model/tiny.weights");
     // Process
-    predictor->processImage(cv::imread("/root/ev_sdk/sample-classifier/data/sample.jpg"), 5);
+    predictor->processImage(cv::imread("/usr/local/ev_sdk/sample-classifier/data/sample.jpg"), 5);
     printf("result: %s", predictor->getProcessResult());
 }

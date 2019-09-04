@@ -3,6 +3,6 @@ train  = /data/imagenet/imagenet1k.train.list
 valid  = /data/imagenet/imagenet1k.valid.list
 backup = /home/pjreddie/backup/
 labels = data/imagenet.labels.list
-names  = /root/ev_sdk/sample-classifier/model/config/imagenet.shortnames.list
+names  = /usr/local/ev_sdk/sample-classifier/model/config/imagenet.shortnames.list
 top=5
 

@@ -585,7 +585,7 @@ typedef struct{
 
 
 network *load_network(char *cfg, char *weights, int clear);
-network *load_network_from_string(char *cfg_string, char *weights, int clear);
+network *load_network_from_string(const char *cfg_string, char *weights, int clear);
 load_args get_base_args(network *net);
 
 void free_data(data d);
@@ -681,6 +681,7 @@ int option_find_int(list *l, char *key, int def);
 int option_find_int_quiet(list *l, char *key, int def);
 
 network *parse_network_cfg(char *filename);
+network *parse_network_cfg_string(const char *cfg_string);
 void save_weights(network *net, char *filename);
 void load_weights(network *net, char *filename);
 void save_weights_upto(network *net, char *filename, int cutoff);

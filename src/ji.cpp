@@ -66,22 +66,7 @@ int processMat(void *predictor, const cv::Mat &inFrame, const char* args, cv::Ma
 }
 
 int ji_init(int argc, char **argv) {
-/* 
-** 参数说明
-for example:
-argc：6
-argv[0]: $license
-argv[1]: $url
-argv[2]: $activation
-argv[3]: $timestamp
-argv[4]: $qps
-argv[5]: $version
-...
-**
-*/
-    /*
-     * License
-     */
+    // 检查license参数
     if (argc < 6) {
         return JISDK_RET_INVALIDPARAMS;
     }

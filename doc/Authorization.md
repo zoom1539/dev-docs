@@ -8,5 +8,5 @@
 
 原理图
 
-![算法授权的基本原理示意图](/Users/rawk/Projects/extremevision/ev_sdk/doc/assets/license.svg)
+![算法授权的基本原理示意图](/Users/rawk/Projects/extremevision/ev_sdk/doc/assets/license.png)
 

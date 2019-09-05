@@ -8,23 +8,23 @@
 
 ```
 ev_sdk
-|-- 3rd		# 第三方源码或库目录，包括boost for wkt(roi),cJSON,license,enctry model，发布时需移除
-|   |-- boost_interface	# boost for wkt(roi)
-|   |-- cJSON						# c版json库,简单易用
-|   |-- encrypt_module	# 模型加密库及相关工具
-|   `-- license					# SDK授权库及相关工具
-|-- CMakeLists.txt			# 本项目的cmake配置文件
+|-- 3rd     # 第三方源码或库目录，包括boost for wkt(roi),cJSON,license,enctry model，发布时需移除
+|   |-- boost_interface # boost for wkt(roi)
+|   |-- cJSON               # c版json库,简单易用
+|   |-- encrypt_module  # 模型加密库及相关工具
+|   `-- license             # SDK授权库及相关工具
+|-- CMakeLists.txt          # 本项目的cmake配置文件
 |-- README.md
-|-- cmake			# 本项目所依赖的cmake模块
+|-- cmake                   # 本项目所依赖的cmake模块
 |   |-- FindEncryptModule.cmake
 |   `-- FindJILicense.cmake
 |-- doc
-|-- include		# 库头文件目录
-|   `-- ji.h	# libji.so的头文件，理论上仅有唯一一个头文件
-|-- lib				# 本项目编译并安装之后，默认会将依赖的库放在该目录，包括libji.so
-|-- sample-classifier		# 示例程序，使用darknet实现的图像分类器，实现了EV_SDK的接口规范
+|-- include         # 库头文件目录
+|   `-- ji.h        # libji.so的头文件，理论上仅有唯一一个头文件
+|-- lib             # 本项目编译并安装之后，默认会将依赖的库放在该目录，包括libji.so
+|-- sample-classifier       # 示例程序，使用darknet实现的图像分类器，实现了EV_SDK的接口规范
 |-- src
-`-- test			# EV_SDK接口测试程序的代码
+`-- test            # EV_SDK接口测试程序的代码
 ```
 
 作为示例，我们提供了一个使用`darknet`实现的图像分类器，并将其使用`EV_SDK`规范进行封装。使用如下步骤尝试编译和测试该图像分类器：
@@ -74,7 +74,7 @@ make install
    I0905 17:25:43.897985 10201 test.cpp:331] event info:
            code: 0
            json: {
-           "results":	[{
+           "results":   [{
                            "className":    "desk",
                            "score":        67.176292
                    }, {
@@ -84,7 +84,7 @@ make install
                            "className":    "monitor",
                            "score":        2.054801
                    }]
-   				}
+                }
    ```
 
 ## 使用`EV_SDK`快速封装算法
@@ -132,7 +132,7 @@ mv dev-docs /usr/local/ev_sdk
    return ret == EV_SUCCESS ? JISDK_RET_SUCCEED : JISDK_RET_UNAUTHORIZED;
    ```
 
-> 更多授权功能的原理，请参考[算法授权](doc/license.md)。
+> 更多授权功能的原理，请参考[算法授权](doc/Authorization.md)。
 
 ### 添加模型加密与解密功能
 
@@ -164,7 +164,7 @@ mv dev-docs /usr/local/ev_sdk
    DestroyEncrtptor(h);
    ```
 
-   模型解密的详细接口函数请参考其头文件[encrypt_wrapper.h](3rd/encrypt_module/include/encrypt_wrapper.h)
+   模型解密的详细接口函数请参考其头文件[encrypt_wrapper.h](3rd/encrypt_module/include/encrypt_wrapper.hpp)
 
 ### 实现`ji.h`中的接口
 

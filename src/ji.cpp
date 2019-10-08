@@ -129,8 +129,8 @@ void *ji_create_predictor(int pdtype) {
     model_struct_str[len] = '\0';
 #endif
 
-    int iRet = predictor->init("/usr/local/ev_sdk//sample-classifier/model/config/imagenet1k.data", model_struct_str,
-            "/usr/local/ev_sdk//sample-classifier/model/tiny.weights");
+    int iRet = predictor->init("/usr/local/ev_sdk/sample-classifier/model/config/imagenet1k.data", model_struct_str,
+            "/usr/local/ev_sdk/sample-classifier/model/tiny.weights");
     if (iRet != ClassifierPredictor::INIT_OK) {
         return nullptr;
     }

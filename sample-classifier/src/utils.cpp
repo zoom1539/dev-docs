@@ -35,4 +35,18 @@ image mat_to_image(const cv::Mat &m) {
     return im;
 }
 
+uchar *cv_mat_to_rgb24(cv::Mat *m) {
+    int width = m->cols;
+    int height = m->rows;
+    int channels = 3;
+    uchar *rgb24 = (uchar *)malloc(width * height * channels);
+    for (int c = 0; c < channels; ++c) {
+        for (int w = 0; w < width; ++w) {
+            for (int h = 0; h < height; ++h) {
+                rgb24[h + w * width + c * width * height] = m->data[]
+            }
+        }
+    }
+}
+
 #endif //JI_UTILS_CPP

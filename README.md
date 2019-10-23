@@ -242,6 +242,65 @@ mv dev-docs /usr/local/ev_sdk
    - CPU：登录[极市平台](http://cvmart.net)，点击我的算法，点击“+”，创建算法，填写相关信息，点击申请上架后，极市开始对算法进行测试审核。审核通过后算法将发布在极市算法市场。
 
 ### 哪些必须完成才能通过测试
+#### 算法总共4个接口，由于需求场景不同，接口不同，项目经理会告知具体需要实现的接口
+1. `ji_calc_frame` : 实时视频流分析
+2. `ji_calc_buffer` : 分析图片
+3. `ji_calc_file` : 分析视频文件
+4. `ji_calc_video_file` ：用于极市平台测试组测试和开发者自测视频文件
+
+##### 注意：由于算法成千上万，要保证高效算法，不仅需要实现相关功能，也要保证基本文件路径、文件夹、文件名称一致
+
+####规范要求
+
+1. 基础要求
+   * 路径：`/usr/local/ev_sdk/test` 文件：`Makefile`，`test.cpp`       请勿修改`Makefile`，`test.cpp`，并在提交版本的时候，需要使用极市平台提供的`Makefile`，`test.cpp`，确定算法能够编译成功且算法程序能正常运行
+   
+   * 路径：`/usr/local/ev_sdk/bin`  文件：`test`     test文件和license.txt复制到任何目录下都能正常运行。编码需要使用全路径
+   
+   * 需要实现授权，若授权失败所有接口返回是`-999`
+   
+   * 整个SDK算法框架都需要按照极视角提供的算法框架模板编码，请勿修改提供的文件夹名称或者文件名称，也勿修改文件夹路径或者文件路径
+   
+   * 针对需要实现的报警算法：
+   
+   * 针对需要实现的报警算法：
+     * 报警输出：`JI_EVENT.code=0(JISDK_CODE_ALARM)`,`JI_EVENT.json`内部`"alert_flag"=1`；
+     * 未报警输出：`JI_EVENT.code=1(JISDK_CODE_NORMAL)`,`JI_EVENT.json`内部`"alert_flag"=0(JISDK_CODE_ALARM)`；
+     * 失败的接口返回`JI_EVENT.code=-1(JISDK_CODE_FAILED)`
+   
+2. 函数规范
+   * 若算法实现了多个接口，需要调式不同接口运行相同数据，查看运行结果是否一致
+   * 实现的接口：输入图片数据或者视频数据的分辨率要与输出数据的分辨率一致
+   * 未实现的接口，如需要调用该接口，该接口需要返回`-2`
+   * 实现的接口传入异常参数的时候，该接口需要返回`-3`
+
+3. 配置规范   `/usr/local/ev_sdk/model`, 文件：`algo_config.json`
+	 基本配置项：
+   
+	- `draw_roi_area`：绘制`roi`分析区域 
+	-  ` draw_result`：绘制分析结果 
+	-  `show_result`：算法运行实时显示  
+	-  `gpu_id`：切换gpu设备  
+	-  ` threshold`：算法阈值
+	
+	每个配置都需要实现，多个配置组合修改情况如下：
+	 * `draw_roi_area`：1  `draw_result`：1  绘制`roi`分析区域，并且显示绘制分析结果
+	* `draw_roi_area`：1  `draw_result`：0  绘制`roi`分析区域，不显示绘制分析结果
+	* `draw_roi_area`：0  `draw_result`：1  不绘制`roi`分析区域，显示绘制分析结果
+	* `draw_roi_area`：0  `draw_result`：0  不绘制`roi`分析区域，不显示绘制分析结果
+	
+	`roi`区域相关的配置
+	
+	* 算法只需实现分析`roi`区域内的场景，`roi`区域外就算有需要识别的场景也不需要识别
+	* 算法识别的检测框需要显示正确
+	* `roi`可以绘制多边形，绘制显示结果需于绘制的形状一致。例如6边型，不规则图形
+	* `roi`默认传入为空，则需分析全部区域
+	
+4. 其他
+  * 实现的算法识别的`json` 格式返回值需和项目经理提供的一致
+  * 算法配置：配置路径验证`/usr/local/ev_sdk/model` 配置名称`algo_config.json`
+  * 除了极市平台基本参数外，如果有其他参数提供`README.md`， 存在`threshold`：参数需要在`README.md`中添加默认值
+  * 公私钥请放在`/usr/local/ev_sdk/bin` ，且勿要更新公私钥，因为我们这边只会保存第一版的公私钥
 
 
 ### FAQ

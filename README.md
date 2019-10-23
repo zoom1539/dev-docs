@@ -1,10 +1,22 @@
 # EV_SDK
 
-对于图像和视频相关算法的开发者，通常需要将开发的算法快速封装出接口并部署到生产平台上，其中涉及到算法的授权、模型加密等保护算法的功能。`EV_SDK`提出了图像&视频算法处理相关的接口规范，并实现了算法授权和模型加密库，开发者只需要针对实际需求，实现部分处理接口，即可快速实现算法封装。
+## 说明
+### EV_SDK的目标
+开发者专注于算法开发及优化，最小化业务层编码，即可快速部署到生产环境，共同打造商用级高质量算法。
+### 极市平台做了哪些
+1. 统一定义算法接口：针对万千视频和图片分析算法，抽象出接口，定义在`include`目录下的`ji.h`文件中
+2. 提供工具包：比如算法授权（必须实现）、模型加密，在`3rd`目录下
+3. 应用层服务：此模块不在ev_sdk中，比如视频处理服务、算法对外通讯的http服务等
+
+### 开发者需要做什么
+1. 模型的训练和调优
+2. 实现`ji.h`约定的接口，同时包括授权、支持分析区域等功能
+3. 实现约定的输入输出
+4. 其他后面文档提到的功能
 
 ## 目录
 
-## 代码目录结构
+### 代码目录结构
 
 ```
 ev_sdk
@@ -26,17 +38,17 @@ ev_sdk
 |-- src
 `-- test            # EV_SDK接口测试程序的代码
 ```
-
+## 使用示例
 作为示例，我们提供了一个使用`darknet`实现的图像分类器，并将其使用`EV_SDK`规范进行封装。使用如下步骤尝试编译和测试该图像分类器：
 
-### 下载`EV_SDK`
+#### 下载`EV_SDK`
 
 ```shell
 git clone https://github.com/ExtremeMart/dev-docs
 mv dev-docs /usr/local/ev_sdk
 ```
 
-### 编译
+#### 编译
 
 `sample-classifier`已经生成公钥和私钥，并把私钥放置在`/usr/local/ev_sdk/sample-classifier/generated-data/privateKey.pem`，公钥已经转换成头文件`/usr/loca/ev_sdk/include/pubKey.hpp`，加密后的模型文件也已经转换成头文件`/usr/local/ev_sdk/include/model_str.hpp`。
 
@@ -49,7 +61,7 @@ cmake ..
 make install
 ```
 
-### 测试示例程序和接口规范
+#### 测试示例程序和接口规范
 
 执行完成之后，`/usr/local/ev_sdk/lib`下将生成`libji.so`和相关的依赖库，以及`/usr/local/ev_sdk/bin/`下的测试程序。
 
@@ -87,22 +99,22 @@ make install
                 }
    ```
 
-## 使用`EV_SDK`快速封装算法
+### 使用`EV_SDK`快速封装算法
 
 以下示例如何将开发的算法以`EV_SDK`规范进行封装
 
-### 实现自己的模型
+#### 实现自己的模型
 
 假设我们使用`darknet`开发了一个图像分类算法，其包含模型文件`classifier-model.cfg`。
 
-### 下载`EV_SDK`
+#### 下载`EV_SDK`
 
 ```shell
 git clone https://github.com/ExtremeMart/dev-docs
 mv dev-docs /usr/local/ev_sdk
 ```
 
-### 添加授权功能
+#### 添加授权功能
 
 1. 使用`EV_SDK`提供的工具生成公钥和私钥
 
@@ -134,7 +146,7 @@ mv dev-docs /usr/local/ev_sdk
 
 > 更多授权功能的原理，请参考[算法授权](doc/Authorization.md)。
 
-### 添加模型加密与解密功能
+#### 添加模型加密与解密功能
 
 1. 使用`EV_SDK`提供的工具加密模型，并生成`C++`头文件
 
@@ -166,7 +178,7 @@ mv dev-docs /usr/local/ev_sdk
 
    模型解密的详细接口函数请参考其头文件[encrypt_wrapper.h](3rd/encrypt_module/include/encrypt_wrapper.hpp)
 
-### 实现`ji.h`中的接口
+#### 实现`ji.h`中的接口
 
 `ji.h`中定义了所有`EV_SDK`规范的接口，详细的接口定义和实现示例，请参考头文件[ji.h](include/ji.h)和示例代码[ji.cpp](src/ji.cpp)。
 
@@ -181,7 +193,7 @@ mv dev-docs /usr/local/ev_sdk
 
    编译完成后，将在`/usr/local/ev_sdk/lib`下生成`libji.so`和其他依赖的库。
 
-### 测试接口规范
+#### 测试接口规范
 
 测试`libji.so`的授权功能是否正常工作以及`ji.h`的接口规范
 
@@ -204,14 +216,14 @@ mv dev-docs /usr/local/ev_sdk
    `EV_SDK`代码中提供了测试所有接口的测试程序，编译安装`libji.so`之后，会在`/usr/local/ev_sdk/bin`下生成`test-ji-api`可执行文件，`test-ji-api`用于测试`ji.h`的接口实现是否正常，例如，测试`ji_calc_file(void *, const char *, const char *, const char *, JI_EVENT *)`接口以及授权功能是否正常：
 
    ```shell
-   /usr/loca/ev_sdk/bin/test-ji-api -f 3 -l generated-data/license.txt -i data/in.jpg -o out.jpg
+   /usr/local/ev_sdk/bin/test-ji-api -f 3 -l generated-data/license.txt -i data/in.jpg -o out.jpg
    ```
 
    接口测试程序的详细功能请查阅`test-ji-api --help`的帮助文档及其代码[test.cpp](test/src/test.cpp)
 
 > 将算法封装成`EV_SDK`接口的`libji.so`之后，请把`/usr/local/ev_sdk/model_str.hpp`和`/usr/local/ev_sdk/pubKey.hpp`删除，并保存私钥`privateKey.pem`。这样就可以使用`privateKey.pem`对所开发算法进行授权。
 
-## 如何将SDK发布到极市开发者平台
+### 如何将SDK发布到极市开发者平台
 
 1. 2.0版本[极市平台](http://cvmart.net)流程：
    - 极市运营同学提供GPU资源；
@@ -229,6 +241,7 @@ mv dev-docs /usr/local/ev_sdk
    - GPU：联系极市运营同学，获取GPU资源；
    - CPU：登录[极市平台](http://cvmart.net)，点击我的算法，点击“+”，创建算法，填写相关信息，点击申请上架后，极市开始对算法进行测试审核。审核通过后算法将发布在极市算法市场。
 
+### 哪些必须完成才能通过测试
 
 
-## FAQ
+### FAQ

@@ -31,4 +31,4 @@ void* FetchFile(void* handle);
  */
 void DestroyEncrtptor(void *handle);
 
-#endif
+#endif  // ENCRYPT_WRAPPER_H_

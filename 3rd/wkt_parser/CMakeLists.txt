@@ -25,7 +25,7 @@ install(TARGETS WKTParser DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
 
 if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
     # testWkt
-    add_executable(testWktParser ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp)
+    add_executable(testWktParser ${CMAKE_CURRENT_SOURCE_DIR}/src/test-wkt-parser.cpp)
     target_link_libraries(testWktParser
             ${OpenCV_LIBS}
             WKTParser

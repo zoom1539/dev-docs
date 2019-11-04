@@ -1,6 +1,11 @@
 find_package(OpenCV REQUIRED)
 find_package(Boost REQUIRED)
 
+LIST(FIND CMAKE_PLATFORM_IMPLICIT_LINK_DIRECTORIES "${CMAKE_INSTALL_PREFIX}/lib" isSystemDir)
+IF("${isSystemDir}" STREQUAL "-1")
+    SET(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+ENDIF("${isSystemDir}" STREQUAL "-1")
+
 # libWKTParser.so
 add_library(WKTParser SHARED ${CMAKE_CURRENT_SOURCE_DIR}/src/WKTParser.cpp)
 target_link_libraries(WKTParser
@@ -21,9 +26,9 @@ target_compile_options(WKTParser
         PRIVATE -std=c++11 -Wall -O3 -fPIC)
 
 # Install libWKTParser.so
-install(TARGETS WKTParser DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
+install(TARGETS WKTParser DESTINATION lib)
 
-if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
     # testWkt
     add_executable(testWktParser ${CMAKE_CURRENT_SOURCE_DIR}/src/test-wkt-parser.cpp)
     target_link_libraries(testWktParser
@@ -34,5 +39,5 @@ if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
             PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
     )
 
-    install(TARGETS testWktParser DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
+    install(TARGETS testWktParser DESTINATION bin)
 endif ()

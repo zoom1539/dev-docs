@@ -49,7 +49,7 @@ install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/3rd/darknet/lib/libdarknet.so DESTINAT
 # 以下是EV_SDK所依赖和需要测试接口的程序&库，请勿修改！！！
 # --- BEGIN EV_SDK DEPENDENCIES ---
 # 编译 JI API 测试程序
-add_executable(test-ji-api ${CMAKE_CURRENT_SOURCE_DIR}/test/src/test.cpp)
+add_executable(test-ji-api ${CMAKE_CURRENT_SOURCE_DIR}/test/test.cpp)
 target_link_libraries(test-ji-api
         ${OpenCV_LIBS}
         cjson

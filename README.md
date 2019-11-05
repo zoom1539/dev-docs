@@ -217,7 +217,7 @@ make install
    ```shell
    /usr/local/ev_sdk/bin/test-ji-api -f ji_calc_frame \
    -i /usr/local/ev_sdk/data/dog.jpg \
--o /tmp/output.jpg \
+   -o /tmp/output.jpg \
    -l /usr/local/ev_sdk/bin/license.txt \
    -a "{\"roi\":\"POLYGON((0.21666666666666667 0.255,0.6924242424242424 0.1375,0.8833333333333333 0.72,0.4106060606060606 0.965,0.048484848484848485 0.82,0.2196969696969697 0.2575))\"}"
    ```

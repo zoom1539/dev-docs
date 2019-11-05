@@ -11,7 +11,7 @@
 #
 #     ji_license
 #
-# Author: huangruhui - huangruhui.v@gmail.com
+# Author: huangruhui - huangruhui@extremevision.com.cn
 
 find_package(PkgConfig)
 pkg_check_modules(PC_ji_license QUIET ji_license)

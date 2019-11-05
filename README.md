@@ -176,7 +176,7 @@ mv dev-docs /usr/local/ev_sdk
    DestroyEncrtptor(h);
    ```
 
-   模型解密的详细接口函数请参考其头文件[encrypt_wrapper.h](3rd/encrypt_module/include/encrypt_wrapper.hpp)
+   模型解密的详细接口函数请参考其头文件[encrypt_wrapper.h](3rd/ev_encrypt_module/include/encrypt_wrapper.hpp)
 
 #### 实现`ji.h`中的接口
 
@@ -265,7 +265,7 @@ mv dev-docs /usr/local/ev_sdk
    
    * 针对需要实现的报警算法：
      * 报警输出：`JI_EVENT.code=0(JISDK_CODE_ALARM)`,`JI_EVENT.json`内部`"alert_flag"=1`；
-     * 未报警输出：`JI_EVENT.code=1(JISDK_CODE_NORMAL)`,`JI_EVENT.json`内部`"alert_flag"=0(JISDK_CODE_ALARM)`；
+     * 未报警输出：`JI_EVENT.code=1(JISDK_CODE_NORMAL)`,`JI_EVENT.json`内部`"alert_flag"=0`；
      * 失败的接口返回`JI_EVENT.code=-1(JISDK_CODE_FAILED)`
    
 2. 函数规范
@@ -304,3 +304,41 @@ mv dev-docs /usr/local/ev_sdk
 
 
 ### FAQ
+
+### `args`使用方式
+
+在`EV_SDK`的接口（如`int ji_calc_frame(void *, const JI_CV_FRAME *, const char *args, JI_CV_FRAME *, JI_EVENT *)`，其`args`参数由开发者自行定义和解析。
+
+在实际项目需求中，通常需要`args`支持输入ROI区域等参数，此时开发者需要实现解析这一`args`的代码。`args`有两种输入格式：
+1. 使用`|`分隔：
+    ```shell
+    "cid=1000|POINT(0.38 0.10)|POINT(0.47 0.41)|LINESTRING(0.07 0.21,0.36 0.245,0.58 0.16,0.97 0.27)|POLYGON((0.048 0.357,0.166 0.0725,0.393 0.0075,0.392 0.202,0.242 0.375))|POLYGON((0.513 0.232,0.79 0.1075,0.928 0.102,0.953 0.64,0.759 0.89,0.51 0.245))|POLYGON((0.115 0.497,0.592 0.82,0.581 0.917,0.14 0.932))"
+   ```
+2. 使用`json`格式封装（推荐开发者使用这种格式）
+    ```json
+    {
+        "cid": "1000",
+        "POINT": [
+            "POINT(0.38 0.10)",
+            "POINT(0.47 0.41)"
+        ],
+        "LINESTRING": "LINESTRING(0.070.21,0.360.245,0.580.16,0.970.27)",
+        "POLYGON": [
+            "POLYGON((0.0480.357,0.1660.0725,0.3930.0075,0.3920.202,0.2420.375))",
+            "POLYGON((0.5130.232,0.790.1075,0.9280.102,0.9530.64,0.7590.89,0.510.245))",
+            "POLYGON((0.1150.497,0.5920.82,0.5810.917,0.140.932))"
+        ]
+    }
+    ```
+
+开发者需要将这一`args`读入并解析，例如当算法支持`ROI`输入，并且支持的`args`格式为`json`时：
+```json
+{
+    "ROI": [
+        "POLYGON((0.0480.357,0.1660.0725,0.3930.0075,0.3920.202,0.2420.375))",
+        "POLYGON((0.5130.232,0.790.1075,0.9280.102,0.9530.64,0.7590.89,0.510.245))",
+        "POLYGON((0.1150.497,0.5920.82,0.5810.917,0.140.932))"
+    ]
+}
+```
+那么开发者需要解析这一`args`，提取其中的ROI参数，并使用`WKTParser`对其进行解析，并应用到自己的算法使用逻辑中。

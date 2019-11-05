@@ -1,11 +1,13 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.5)
 project(ji)
 if(CMAKE_COMPILER_IS_GNUCXX)
     set(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")
     message(STATUS "optional:-std=c++11")
 endif(CMAKE_COMPILER_IS_GNUCXX)
 set(CMAKE_INSTALL_PREFIX "/usr/local/ev_sdk")
+SET(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 
+# 使用pkg-config查找必要的依赖包
 list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_SOURCE_DIR}/cmake)
 find_package(JILicense REQUIRED)
 find_package(EncryptModule REQUIRED)
@@ -13,51 +15,52 @@ find_package(OpenCV REQUIRED)
 find_library(glog REQUIRED)
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/3rd/cJSON)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/3rd/boost_interface)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/3rd/license/v10)
-
-# 在这里添加开发者的cmake工程
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/sample-classifier)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/3rd/wkt_parser)
 
 # 编译libji.so
-add_library (${PROJECT_NAME} SHARED ${PROJECT_SOURCE_DIR}/src/ji.cpp)
+list(APPEND libji_SOURCES
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/ji.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/SampleDetector.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/ji_utils.cpp)
+add_library (${PROJECT_NAME} SHARED ${libji_SOURCES})
 target_include_directories(${PROJECT_NAME}
-        PRIVATE ${OpenCV_INCLUDE_DIR}
+        PUBLIC ${OpenCV_INCLUDE_DIR}
         PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
         PUBLIC ${ji_license_INCLUDE_DIRS}
-        PUBLIC ${encrypt_module_INCLUDE_DIRS})
+        PUBLIC ${ev_encrypt_module_INCLUDE_DIRS}
+        PUBLIC "/usr/local/ev_sdk/3rd/darknet/include")
 target_link_libraries(${PROJECT_NAME}
         ${OpenCV_LIBS}
         crypto
         curl
         glog
         ${ji_license_LIBRARIES}
-        ${encrypt_module_LIBRARIES}
+        ${ev_encrypt_module_LIBRARIES}
         cjson
-        BoostInterface
-        ClassifierPredictor
+        WKTParser
+        "/usr/local/ev_sdk/3rd/darknet/lib/libdarknet.so"
 )
 
+# 安装SampleDetector所依赖的libdarknet.so, 请在此处将自己依赖的库安装到/usr/local/ev_sdk/lib下
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/3rd/darknet/lib/libdarknet.so DESTINATION lib)
+
+
+
+# 以下是EV_SDK所依赖和需要测试接口的程序&库，请勿修改！！！
+# --- BEGIN EV_SDK DEPENDENCIES ---
 # 编译 JI API 测试程序
 add_executable(test-ji-api ${CMAKE_CURRENT_SOURCE_DIR}/test/src/test.cpp)
 target_link_libraries(test-ji-api
         ${OpenCV_LIBS}
         cjson
         glog
-        ji
+        ${PROJECT_NAME}
 )
 
-# install libji.so
+# Install libev_encrypt_module
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/3rd/ev_encrypt_module/lib/libev_encrypt_module.so DESTINATION lib)
+# Install libji.so
 install(TARGETS ${PROJECT_NAME} DESTINATION lib)
-
-# install test-ji-api
+# Install test-ji-api
 install(TARGETS test-ji-api DESTINATION bin)
-
-# install encrypt_module
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/3rd/encrypt_module/lib/libencrypt_wrapper.so DESTINATION lib)
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/3rd/encrypt_module/lib/libev_encrypt.so DESTINATION lib)
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/3rd/encrypt_module/lib/libev_encrypt_api.so DESTINATION lib)
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/3rd/encrypt_module/lib/libev_encrypt_suite.so DESTINATION lib)
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/3rd/encrypt_module/lib/libev_base64.so DESTINATION lib)
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/3rd/encrypt_module/lib/libev_confuse.so DESTINATION lib)
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/3rd/encrypt_module/lib/libev_file_helper.so DESTINATION lib)
+# ---  END EV_SDK DEPENDENCIES  ---

@@ -87,7 +87,7 @@ STATUS SampleDetector::processImage(const cv::Mat &cv_image, std::vector<Object>
         for (uint8_t j = 0; j < mClasses; ++j) {
             if (detections[i].prob[j] > mThresh) {
                 // More information is in each detections[i] item.
-                std::cout << mLabels[j] << " " << (int16_t) (detections[i].prob[j] * 100) << "%" << std::endl;
+                // std::cout << mLabels[j] << " " << (int16_t) (detections[i].prob[j] * 100) << "%" << std::endl;
                 cv::Rect rect;
                 rect.width = detections[i].bbox.w * cv_image.cols;
                 rect.height = detections[i].bbox.h * cv_image.rows;

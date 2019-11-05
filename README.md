@@ -172,7 +172,7 @@ mv dev-docs /usr/local/ev_sdk
    model_struct_str = (char *) FetchBuffer(h, fileLen);
    // 获取解密后的文件句柄
    // file *file = (file *) FetchFile(h);
-DestroyEncrtptor(h);
+   DestroyEncrtptor(h);
    ```
    
    模型解密的详细接口函数请参考其头文件[encrypt_wrapper.h](3rd/ev_encrypt_module/include/encrypt_wrapper.hpp)

@@ -238,7 +238,7 @@ make install
 规范测试大部分内容依赖于内置的`/usr/local/ev_sdk/test`下面的代码，这个测试程序会链接`/usr/local/ev_sdk/liblibji.so`库，`EV_SDK`封装完成提交后，极市方会使用`test-ji-api`程序测试`ji.h`中的所有接口。测试程序与`EV_SDK`的实现没有关系，所以请**请不要修改`/usr/local/ev_sdk/test`目录下的代码！！！**
 
 1. 接口功能要求
-   
+  
    - 确定`test-ji-api`能够正常编译，并且将`test-ji-api`和`license.txt`移动到任意目录，都需要能够正常运行；
    
    - 在提交算法之前，请自行通过`/usr/local/ev_sdk/bin/test-ji-api`测试接口功能是否正常；
@@ -259,6 +259,8 @@ make install
    
      - `args`中输入的`roi`需要支持多边形
      - 算法默认分析区域必须是全尺寸图，如当`roi`传入为空时，算法对整张图进行分析；
+     
+   - 为了保证多个算法显示效果的一致性，与画框相关的功能必须优先使用`ji_utils.hpp.h`中提供的工具函数；
    
    > 1. ` test-ji-api`的使用方法可以参考上面的使用示例以及运行`test-ji-api --help`；
    > 2. 以上要求在示例程序`ji.cpp`中有实现；
@@ -376,4 +378,4 @@ make install
    ./test-ji-api -f ji_calc_frame -i /path/to/test.jpg -l /path/to/license.txt -o /path/to/out.jpg
    ```
 
-   
+更多选项，请参考`test-ji-api --help`

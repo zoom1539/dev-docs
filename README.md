@@ -233,7 +233,7 @@ make install
 3. `ji_calc_file` ，用于分析图片文件
 4. `ji_calc_video_file` ：用于极市平台测试组测试和开发者自测视频文件
 
-####规范要求
+#### 规范要求
 
 规范测试大部分内容依赖于内置的`/usr/local/ev_sdk/test`下面的代码，这个测试程序会链接`/usr/local/ev_sdk/liblibji.so`库，`EV_SDK`封装完成提交后，极市方会使用`test-ji-api`程序测试`ji.h`中的所有接口。测试程序与`EV_SDK`的实现没有关系，所以请**请不要修改`/usr/local/ev_sdk/test`目录下的代码！！！**
 
@@ -297,13 +297,14 @@ make install
    算法输出结果，即`JI_EVENT.json`必须是使用`json`格式填充的字符串，`json`字符串内所有的**键名称**必须是小写字母，并且单词之间使用下划线分隔，如`alert_flag`；
 
 6. 文件结构规范要求
-  * 授权功能生成的公私钥必须放在`/usr/local/ev_sdk/bin` ，且一次生成后，请勿再次更新公私钥（极市方会保存第一版的私钥），如果在后续更新中，重新生成了公私钥，会导致公私钥不匹配；
-  * 与模型相关的文件必须存放在`/usr/local/ev_sdk/model`目录下，例如权重文件、目标检测通常需要的名称文件`coco.names`等。
-  * 最终编译生成的`libji.so`必须自行链接必要的库，`test-ji-api`不会链接除`/usr/local/ev_sdk/lib/libji.so`以外的算法依赖库；
-  * 如果`libji.so`依赖了系统动态库搜索路径（如`/usr/lib`，`/lib`等）以外的库，必须将其安装到`/usr/local/ev_sdk/lib`下，可以使用`ldd /usr/local/ev_sdk/lib/libji.so`查看`libji.so`是否正确链接了所有的依赖库。
-  * **务必删除源代码和授权文件**
-    * `/usr/local/ev_sdk/src/`下的C&C++代码；
-    * 授权生成的私钥`privateKey.pem`；
+
+   * 授权功能生成的公私钥必须放在`/usr/local/ev_sdk/bin` ，且一次生成后，请勿再次更新公私钥（极市方会保存第一版的私钥），如果在后续更新中，重新生成了公私钥，会导致公私钥不匹配；
+   * 与模型相关的文件必须存放在`/usr/local/ev_sdk/model`目录下，例如权重文件、目标检测通常需要的名称文件`coco.names`等。
+   * 最终编译生成的`libji.so`必须自行链接必要的库，`test-ji-api`不会链接除`/usr/local/ev_sdk/lib/libji.so`以外的算法依赖库；
+   * 如果`libji.so`依赖了系统动态库搜索路径（如`/usr/lib`，`/lib`等）以外的库，必须将其安装到`/usr/local/ev_sdk/lib`下，可以使用`ldd /usr/local/ev_sdk/lib/libji.so`查看`libji.so`是否正确链接了所有的依赖库。
+   * **务必删除源代码和授权文件**
+     * `/usr/local/ev_sdk/src/`下的C&C++代码；
+     * 授权生成的私钥`privateKey.pem`；
 
 
 ## FAQ

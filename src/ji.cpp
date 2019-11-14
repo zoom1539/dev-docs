@@ -29,6 +29,10 @@
 // 如果需要加密模型，请保留该宏定义，并在ji_create_predictor中实现模型解密
 #define ENABLE_JI_MODEL_ENCRYPTION
 
+#ifndef EV_SDK_DEBUG
+#define EV_SDK_DEBUG 1
+#endif
+
 cv::Mat outputFrame;        // 用于存储算法处理后的输出图像，根据ji.h的接口规范，接口实现需要负责释放该资源
 char *jsonResult = nullptr; // 用于存储算法处理后输出到JI_EVENT的json字符串，根据ji.h的接口规范，接口实现需要负责释放改资源
 
@@ -186,25 +190,34 @@ int processMat(SampleDetector *detector, const cv::Mat &inFrame, const char* arg
     if (args != nullptr && strlen(args) > 0) {
         LOG(INFO) << "input args:" << args;
         cJSON *argsObj = cJSON_Parse(args);
-        cJSON *roiArrObj = cJSON_GetObjectItem(argsObj, "roi");
-        WKTParser wktParser(cv::Size(inFrame.cols, inFrame.rows));
+        do {
+            if (argsObj == nullptr) {
+                LOG(ERROR) << "Cannot parse args!";
+                break;
+            }
+            cJSON *roiArrObj = cJSON_GetObjectItem(argsObj, "roi");
+            if (roiArrObj == nullptr) {
+                LOG(INFO) << "roi param not found!";
+                break;
+            }
+            WKTParser wktParser(cv::Size(inFrame.cols, inFrame.rows));
 
-        for (int i = 0; i < cJSON_GetArraySize(roiArrObj); ++i) {
-            cJSON *roiObj = cJSON_GetArrayItem(roiArrObj, i);
-            if (roiObj == nullptr || roiObj->type != cJSON_String) {
-                continue;
+            for (int i = 0; i < cJSON_GetArraySize(roiArrObj); ++i) {
+                cJSON *roiObj = cJSON_GetArrayItem(roiArrObj, i);
+                if (roiObj == nullptr || roiObj->type != cJSON_String) {
+                    continue;
+                }
+                VectorPoint polygonPoints;
+                wktParser.parsePolygon(roiObj->valuestring, &polygonPoints);
+                polygons.emplace_back(polygonPoints);
             }
-            VectorPoint polygonPoints;
-            wktParser.parsePolygon(roiObj->valuestring, &polygonPoints);
-            polygons.emplace_back(polygonPoints);
-            LOG(INFO) << "Found roi=" << cJSON_Print(roiObj);
-            LOG(INFO) << "Parsed roi points:";
-            for (auto &point: polygonPoints) {
-                LOG(INFO) << "Point(" << point.x << ", " << point.y << ")";
-            }
+        } while (false);
+        if (argsObj != nullptr) {
+            cJSON_Delete(argsObj);
         }
     }
 
+    // 算法处理
     std::vector<SampleDetector::Object> detectResult;
     int processRet = detector->processImage(inFrame, detectResult);
     if (processRet != SampleDetector::PROCESS_OK) {
@@ -285,6 +298,11 @@ int processMat(SampleDetector *detector, const cv::Mat &inFrame, const char* arg
     }
     event.json = jsonResult;
 
+    if (rootObj)
+        cJSON_Delete(rootObj);
+    if (jsonResultStr)
+        free(jsonResultStr);
+
     return JISDK_RET_SUCCEED;
 }
 
@@ -310,14 +328,15 @@ int ji_init(int argc, char **argv) {
     }
 #endif
     if (authCode != JISDK_RET_SUCCEED) {
+        LOG(ERROR) << "ji_check_license failed!";
         return authCode;
     }
 
-    // 从统一的配置文件读取配置参数，实现必须支持从这个统一的配置文件中读取算法&业务逻辑相关的配置参数
+    // 从统一的配置文件读取配置参数，SDK实现必须支持从这个统一的配置文件中读取算法&业务逻辑相关的配置参数
     const char *configFile = "/usr/local/ev_sdk/model/algo_config.json";
     parseConfigFile(configFile);
 
-    return JISDK_RET_SUCCEED;
+    return authCode;
 }
 
 void ji_reinit() {
@@ -396,14 +415,6 @@ int ji_calc_frame(void *predictor, const JI_CV_FRAME *inFrame, const char *args,
         return JISDK_RET_INVALIDPARAMS;
     }
 
-#ifdef ENABLE_JI_AUTHORIZATION
-    // 校验license是否过期等
-    int licenseRet = ji_check_expire();
-    if (licenseRet != EV_SUCCESS) {
-        return (licenseRet == EV_OVERMAXQPS) ? JISDK_RET_OVERMAXQPS : JISDK_RET_UNAUTHORIZED;
-    }
-#endif
-
     auto *detector = reinterpret_cast<SampleDetector *>(predictor);
     cv::Mat inMat(inFrame->rows, inFrame->cols, inFrame->type, inFrame->data, inFrame->step);
     if (inMat.empty()) {
@@ -430,14 +441,6 @@ int ji_calc_buffer(void *predictor, const void *buffer, int length, const char *
         return JISDK_RET_INVALIDPARAMS;
     }
 
-#ifdef ENABLE_JI_AUTHORIZATION
-    // 校验license是否过期等
-    int licenseRet = ji_check_expire();
-    if (licenseRet != EV_SUCCESS) {
-        return (licenseRet == EV_OVERMAXQPS) ? JISDK_RET_OVERMAXQPS : JISDK_RET_UNAUTHORIZED;
-    }
-#endif
-
     auto *classifierPtr = reinterpret_cast<SampleDetector *>(predictor);
 
     const unsigned char *b = (const unsigned char *) buffer;
@@ -463,14 +466,6 @@ int ji_calc_file(void *predictor, const char *inFile, const char *args, const ch
         return JISDK_RET_INVALIDPARAMS;
     }
 
-#ifdef ENABLE_JI_AUTHORIZATION
-    // 校验license是否过期等
-    int licenseRet = ji_check_expire();
-    if (licenseRet != EV_SUCCESS) {
-        return (licenseRet == EV_OVERMAXQPS) ? JISDK_RET_OVERMAXQPS : JISDK_RET_UNAUTHORIZED;
-    }
-#endif
-
     auto *classifierPtr = reinterpret_cast<SampleDetector *>(predictor);
     cv::Mat inMat = cv::imread(inFile);
     if (inMat.empty()) {
@@ -491,5 +486,93 @@ int ji_calc_file(void *predictor, const char *inFile, const char *args, const ch
 int ji_calc_video_file(void *predictor, const char *infile, const char* args,
                        const char *outfile, const char *jsonfile) {
     // 没有实现的接口必须返回`JISDK_RET_UNUSED`
-    return JISDK_RET_UNUSED;
+    if (predictor == NULL || infile == NULL) {
+        return JISDK_RET_INVALIDPARAMS;
+    }
+    auto *classifierPtr = reinterpret_cast<SampleDetector *>(predictor);
+
+    cv::VideoCapture videoCapture(infile);
+    if (!videoCapture.isOpened()) {
+        return JISDK_RET_FAILED;
+    }
+
+    cv::VideoWriter vwriter;
+    cv::Mat inMat, outMat;
+    JI_EVENT event;
+    int iRet = JISDK_RET_FAILED;
+    int totalFrames, alertFrames, timestamp;
+    totalFrames = alertFrames = timestamp = 0;
+
+    cJSON *jsonRoot, *jsonDetail;
+    jsonRoot = jsonDetail = NULL;
+
+    while (videoCapture.read(inMat)) {
+        timestamp = videoCapture.get(cv::CAP_PROP_POS_MSEC);
+
+        iRet = processMat(classifierPtr, inMat, args, outMat, event);
+
+        if (iRet == JISDK_RET_SUCCEED) {
+            ++totalFrames;
+
+            if (event.code != JISDK_CODE_FAILED) {
+                if (event.code == JISDK_CODE_ALARM) {
+                    ++alertFrames;
+                }
+
+                if (!outMat.empty() && outfile) {
+                    if (!vwriter.isOpened()) {
+                        vwriter.open(outfile,
+                                /*videoCapture.get(cv::CAP_PROP_FOURCC)*/cv::VideoWriter::fourcc('X', '2', '6', '4'),
+                                     videoCapture.get(cv::CAP_PROP_FPS), outMat.size());
+                        if (!vwriter.isOpened()) {
+                            return JISDK_RET_FAILED;
+                        }
+                    }
+                    vwriter.write(outMat);
+                }
+
+                if (event.json && jsonfile) {
+                    if (jsonDetail == NULL) {
+                        jsonDetail = cJSON_CreateArray();
+                    }
+
+                    cJSON *jsonFrame = cJSON_Parse(event.json);
+                    if (jsonFrame) {
+                        cJSON_AddItemToObjectCS(jsonFrame, "timestamp", cJSON_CreateNumber(timestamp));
+                        cJSON_AddItemToArray(jsonDetail, jsonFrame);
+                    }
+                }
+            }
+        } else {
+            break;
+        }
+    }
+
+    if (iRet == JISDK_RET_SUCCEED) {
+        if (jsonfile) {
+            jsonRoot = cJSON_CreateObject();
+            cJSON_AddItemToObjectCS(jsonRoot, "total_frames", cJSON_CreateNumber(totalFrames));
+            cJSON_AddItemToObjectCS(jsonRoot, "alert_frames", cJSON_CreateNumber(alertFrames));
+
+            if (jsonDetail) {
+                cJSON_AddItemToObjectCS(jsonRoot, "detail", jsonDetail);
+            }
+
+            char *buff = cJSON_Print(jsonRoot);
+            std::ofstream fs(jsonfile);
+            if (fs.is_open()) {
+                fs << buff;
+                fs.close();
+            }
+            free(buff);
+        }
+    }
+
+    if (jsonRoot) {
+        cJSON_Delete(jsonRoot);
+    } else if (jsonDetail) {
+        cJSON_Delete(jsonDetail);
+    }
+
+    return iRet;
 }

@@ -5,14 +5,15 @@ if(CMAKE_COMPILER_IS_GNUCXX)
     message(STATUS "optional:-std=c++11")
 endif(CMAKE_COMPILER_IS_GNUCXX)
 set(CMAKE_INSTALL_PREFIX "/usr/local/ev_sdk")
-SET(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 
 # 使用pkg-config查找必要的依赖包
-list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_SOURCE_DIR}/cmake)
-find_package(JILicense REQUIRED)
-find_package(EncryptModule REQUIRED)
 find_package(OpenCV REQUIRED)
 find_library(glog REQUIRED)
+set(ENV{PKG_CONFIG_PATH} "/usr/local/ev_sdk/3rd/ev_encrypt_module/lib/pkgconfig:/usr/local/ev_sdk/3rd/license/v20_0/lib/pkgconfig:ENV{PKG_CONFIG_PATH}")
+find_package(PkgConfig REQUIRED)
+pkg_search_module(EV_ENCRYPT_MODULE REQUIRED ev_encrypt_module)
+pkg_search_module(JI_LICENSE REQUIRED ji_license)
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/3rd/cJSON)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/3rd/wkt_parser)
@@ -26,16 +27,14 @@ add_library (${PROJECT_NAME} SHARED ${libji_SOURCES})
 target_include_directories(${PROJECT_NAME}
         PUBLIC ${OpenCV_INCLUDE_DIR}
         PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
-        PUBLIC ${ji_license_INCLUDE_DIRS}
-        PUBLIC ${ev_encrypt_module_INCLUDE_DIRS}
+        PUBLIC ${JI_LICENSE_INCLUDE_DIRS}
+        PUBLIC ${EV_ENCRYPT_MODULE_INCLUDE_DIRS}
         PUBLIC "/usr/local/ev_sdk/3rd/darknet/include")
 target_link_libraries(${PROJECT_NAME}
         ${OpenCV_LIBS}
-        crypto
-        curl
         glog
-        ${ji_license_LIBRARIES}
-        ${ev_encrypt_module_LIBRARIES}
+        ${JI_LICENSE_LDFLAGS}
+        ${EV_ENCRYPT_MODULE_LDFLAGS}
         cjson
         WKTParser
         "/usr/local/ev_sdk/3rd/darknet/lib/libdarknet.so"
@@ -56,7 +55,9 @@ target_link_libraries(test-ji-api
         glog
         ${PROJECT_NAME}
 )
-
+# Install libji_license_impl.so
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/3rd/license/v20_0/lib/libji_license_impl.so DESTINATION lib)
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/3rd/license/v20_0/lib/license_lib.sig DESTINATION lib)
 # Install libev_encrypt_module
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/3rd/ev_encrypt_module/lib/libev_encrypt_module.so DESTINATION lib)
 # Install libji.so

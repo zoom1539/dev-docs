@@ -17,7 +17,7 @@
 3. 在`ji.cpp`的实现中，获取解密后的模型：
     ```shel
    // 使用加密后的模型配置文件
-   void *h = CreateEncryptor(model_str.c_str(), model_str.size(), key.c_str());
+   void *h = CreateDecryptor(model_str.c_str(), model_str.size(), key.c_str());
    // 获取解密后的字符串
    int fileLen = 0;
    void *decryptedModel = (FetchBuffer(h, fileLen); 

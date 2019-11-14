@@ -363,7 +363,7 @@ void *ji_create_predictor(int pdtype) {
 #ifdef ENABLE_JI_MODEL_ENCRYPTION
     LOG(INFO) << "Decrypting model...";
     // 使用加密后的模型配置文件
-    void *h = CreateEncryptor(model_str.c_str(), model_str.size(), key.c_str());
+    void *h = CreateDecryptor(model_str.c_str(), model_str.size(), key.c_str());
 
     // 获取解密后的字符串
     int fileLen = 0;
@@ -377,7 +377,7 @@ void *ji_create_predictor(int pdtype) {
     // 获取解密后的文件句柄
     // file *file = (file *) FetchFile(h);
 
-    DestroyEncrtptor(h);
+    DestroyDecrtptor(h);
 #else
     // 不使用模型加密功能，直接从模型文件读取
     std::ifstream ifs = std::ifstream("/usr/local/ev_sdk/model/yolov3-tiny.cfg", std::ios::binary);

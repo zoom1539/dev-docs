@@ -8,7 +8,7 @@
  * @param[in] key 加密原始数据所使用的随机密钥
  * @return 解密器句柄
  */
-void* CreateEncryptor(const char* data,int len,const char* key);
+void* CreateDecryptor(const char* data, int len, const char* key);
 
 /**
  * 从数据解密器获取解密后的数据
@@ -29,6 +29,6 @@ void* FetchFile(void* handle);
  * 释放解密器
  * @param handle 需要释放的解密器句柄
  */
-void DestroyEncrtptor(void *handle);
+void DestroyDecrtptor(void *handle);
 
 #endif  // ENCRYPT_WRAPPER_H_

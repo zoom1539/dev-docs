@@ -14,6 +14,7 @@ extern "C"
 #define JISDK_RET_FAILED                (-1)            // 失败
 #define JISDK_RET_UNUSED                (-2)            // 未实现
 #define JISDK_RET_INVALIDPARAMS         (-3)            // 参数错误
+#define JISDK_RET_OFFLINE               (-9)            // 联网校验时离线状态
 #define JISDK_RET_OVERMAXQPS            (-99)           // 超过最大请求量
 #define JISDK_RET_UNAUTHORIZED          (-999)          // 未授权
 

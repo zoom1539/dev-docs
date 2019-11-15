@@ -189,7 +189,16 @@ int processMat(SampleDetector *detector, const cv::Mat &inFrame, const char* arg
     // 检查授权，统计QPS
     int ret = ji_check_expire();
     if (ret != JISDK_RET_SUCCEED) {
-        return ret == EV_OVERMAXQPS ? JISDK_RET_OVERMAXQPS : JISDK_RET_UNAUTHORIZED;
+        switch (ret) {
+            case EV_OVERMAXQPS:
+                return JISDK_RET_OVERMAXQPS;
+                break;
+            case EV_OFFLINE:
+                return JISDK_RET_OFFLINE;
+                break;
+            default:
+                return JISDK_RET_UNAUTHORIZED;
+        }
     }
 
      /** 解析args传入的参数，args使用json格式的字符串传入，开发者需要根据实际需求解析参数，此处示例，args内部只有一个roi参数

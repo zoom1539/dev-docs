@@ -15,16 +15,18 @@ extern "C" {
 联网最新版本:v8
 ** 
 */
-#define EV_LICENSE_VERSION  "version:v10.5"
+#define EV_LICENSE_VERSION  "version:v10.6"
 
 #define EV_MESSAGE_MAXLEN   (4096)
 #define EV_ID_MAXLEN        (1024)
 
+/* 函数返回值 */
 #define EV_SUCCESS          (0)
 #define EV_FAIL             (-1)
 #define EV_EXPIRE           (-2)
 #define EV_OVERMAXQPS       (-3)
-#define EV_INVALID          (-4)
+#define EV_INVALID          (-4)        //联网校验，通信协议无效
+#define EV_OFFLINE          (-5)        //联网校验，服务器离线状态
 
 /*
 生成rsa钥匙:
@@ -35,13 +37,13 @@ extern "C" {
 /*
 函 数 名	: ji_generate_reference_impl
 功能描述	: 非联网，在既定运行环境生成参考信息,包括参考码和版本
-函数参数	: 
+函数参数	:
     info:       [可选参数] 输入输出参数,参考信息缓冲,json格式,
                 包括参考码和版本(建议分配(EV_MESSAGE_MAXLEN)
     reference:  [可选参数] 输入输出参数,参考码缓冲(建议分配EV_ID_MAXLEN)
     version:    [可选参数] 输入输出参数,参考码版本
-返回参数	: 成功返回EV_SUCCESS,其它表示失败  
-注     意: info一组,reference与version一组，两组至少传一组 
+返回参数	: 成功返回EV_SUCCESS,其它表示失败
+注     意: info一组,reference与version一组，两组至少传一组
 *****************************************************************************/
 DLL_DEFAULT
 int ji_generate_reference_impl(char *info, char *reference, int *version);
@@ -50,13 +52,13 @@ int ji_generate_reference_impl(char *info, char *reference, int *version);
 /*
 函 数 名 : ji_generate_reference_networking_impl
 功能描述    : 联网,在既定运行环境生成参考信息,包括参考码和版本
-函数参数    : 
+函数参数    :
     info:       [可选参数] 输入输出参数,参考信息缓冲,json格式,
                 包括参考码和版本(建议分配(EV_MESSAGE_MAXLEN)
     reference:  [可选参数] 输入输出参数,参考码缓冲(建议分配EV_ID_MAXLEN)
     version:    [可选参数] 输入输出参数,参考码版本
-返回参数    : 成功返回EV_SUCCESS,其它表示失败  
-注     意: info一组,reference与version一组，两组至少传一组 
+返回参数    : 成功返回EV_SUCCESS,其它表示失败
+注     意: info一组,reference与version一组，两组至少传一组
 *****************************************************************************/
 DLL_DEFAULT
 int ji_generate_reference_networking_impl(char *info, char *reference, int *version);
@@ -73,7 +75,7 @@ int ji_generate_reference_networking_impl(char *info, char *reference, int *vers
     qps:        [可选参数] 输入参数,指定请求量上限
     version:    [必选参数] 输入参数,参考码版本
     license:    [必选参数] 输入输出参数,授权码缓冲(建议分配EV_ID_MAXLEN)
-返回参数	: 成功返回EV_SUCCESS,其它表示失败 
+返回参数	: 成功返回EV_SUCCESS,其它表示失败
 *****************************************************************************/
 DLL_DEFAULT
 int ji_generate_license_impl(const char *privateKey, const char *reference,
@@ -84,7 +86,7 @@ int ji_generate_license_impl(const char *privateKey, const char *reference,
 /*
 函 数 名 : ji_check_license_impl
 功能描述    : 校验授权码
-函数参数    : 
+函数参数    :
     pubKey:     [必选参数] 输入参数,rsa公钥
     license:    [必选参数] 输入参数,授权码
     url:        [可选参数] 输入参数,校验授权码http地址
@@ -92,7 +94,7 @@ int ji_generate_license_impl(const char *privateKey, const char *reference,
     timestamp:  [可选参数] 输入参数,指定有效期
     qps:        [可选参数] 输入参数,指定请求量上限
     version:    [必选参数] 输入参数,参考码版本
-返回参数    : 成功返回EV_SUCCESS,其它表示失败 
+返回参数    : 成功返回EV_SUCCESS,其它表示失败
 备注      : 只有v8(含)后才会真正生效url及activation参数.
 *****************************************************************************/
 DLL_DEFAULT

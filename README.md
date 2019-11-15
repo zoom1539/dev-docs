@@ -28,9 +28,6 @@ ev_sdk
 |   `-- license             # SDK授权库及相关工具
 |-- CMakeLists.txt          # 本项目的cmake构建文件
 |-- README.md
-|-- cmake                   # 本项目所依赖的cmake模块
-|   |-- FindEncryptModule.cmake
-|   `-- FindJILicense.cmake
 |-- doc
 |-- include         # 库头文件目录
 |   `-- ji.h        # libji.so的头文件，理论上仅有唯一一个头文件

@@ -34,7 +34,7 @@
 #endif
 
 cv::Mat outputFrame;        // 用于存储算法处理后的输出图像，根据ji.h的接口规范，接口实现需要负责释放该资源
-char *jsonResult = nullptr; // 用于存储算法处理后输出到JI_EVENT的json字符串，根据ji.h的接口规范，接口实现需要负责释放改资源
+char *jsonResult = nullptr; // 用于存储算法处理后输出到JI_EVENT的json字符串，根据ji.h的接口规范，接口实现需要负责释放该资源
 
 // 算法与画图的可配置参数及其默认值
 double nms = 0.6;
@@ -185,7 +185,21 @@ int processMat(SampleDetector *detector, const cv::Mat &inFrame, const char* arg
     if (inFrame.empty()) {
         return JISDK_RET_FAILED;
     }
-    // 获取ROI，这里的示例代码仅将ROI区域画在输出图中，请根据实际项目需求，对ROI区域进行分析
+
+    // 检查授权，统计QPS
+    int ret = ji_check_expire();
+    if (ret != JISDK_RET_SUCCEED) {
+        return ret == EV_OVERMAXQPS ? JISDK_RET_OVERMAXQPS : JISDK_RET_UNAUTHORIZED;
+    }
+
+     /** 解析args传入的参数，args使用json格式的字符串传入，开发者需要根据实际需求解析参数，此处示例，args内部只有一个roi参数
+      * 输入的args样例：
+      * {
+      *     "roi": [
+      *         "POLYGON((0.21666666666666667 0.255,0.6924242424242424 0.1375,0.8833333333333333 0.72,0.4106060606060606 0.965,0.048484848484848485 0.82,0.2196969696969697 0.2575))"
+      *     ]
+      * }
+      **/
     std::vector<VectorPoint> polygons;
     if (args != nullptr && strlen(args) > 0) {
         LOG(INFO) << "input args:" << args;
@@ -224,8 +238,9 @@ int processMat(SampleDetector *detector, const cv::Mat &inFrame, const char* arg
         return JISDK_RET_FAILED;
     }
 
-    bool isNeedAlert = false;
-    std::vector<SampleDetector::Object> dogs;
+    // 此处示例业务逻辑：当算法到有`dog`时，就报警
+    bool isNeedAlert = false;   // 是否需要报警
+    std::vector<SampleDetector::Object> dogs;   // 检测到的`dog`
 
     // 创建输出图
     inFrame.copyTo(outFrame);
@@ -237,7 +252,7 @@ int processMat(SampleDetector *detector, const cv::Mat &inFrame, const char* arg
     for (auto &object : detectResult) {
         // 如果检测到有`狗`就报警
         if (strcmp(object.name.c_str(), "dog") == 0) {
-            LOG(INFO) << "Found person:" << object.name;
+            LOG(INFO) << "Found dog:" << object.name;
             if (drawResult) {
                 std::stringstream ss;
                 ss << object.name;
@@ -339,7 +354,7 @@ int ji_init(int argc, char **argv) {
     return authCode;
 }
 
-void ji_reinit() {
+void ji_uninit() {
 #ifdef ENABLE_JI_AUTHORIZATION
     ji_check_license(NULL, NULL, NULL, NULL, NULL, NULL, 0);
 #endif
@@ -362,7 +377,7 @@ void *ji_create_predictor(int pdtype) {
 
 #ifdef ENABLE_JI_MODEL_ENCRYPTION
     LOG(INFO) << "Decrypting model...";
-    // 使用加密后的模型配置文件
+    // 如果使用了模型加密功能，需要将加密后的模型（放在`model_str.hpp`内）进行解密
     void *h = CreateDecryptor(model_str.c_str(), model_str.size(), key.c_str());
 
     // 获取解密后的字符串

@@ -56,7 +56,7 @@ int ji_init(int argc, char **argv);
 /**
  * sdk反初始化函数，主要用于联网license校验线程终止等
  */
-void ji_uninit();
+void ji_reinit();
 
 /**
  * 创建算法实例，算法在处理过程中，如果当前帧的处理依赖于前面若干帧的结果，那么称为算法是有状态的；相反，如果算法处理只依赖于当前输入帧，那

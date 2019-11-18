@@ -11,6 +11,7 @@
 
 #include "encrypt_wrapper.hpp"
 #include "ji_license.h"
+#include "ji_license_impl.h"
 #include "WKTParser.h"
 #include "cJSON.h"
 #include <ji_utils.h>
@@ -119,11 +120,6 @@ bool parseConfigFile(const char *configFile) {
         if (drawConfObj != nullptr && (drawConfObj->type == cJSON_True || drawConfObj->type == cJSON_False)) {
             drawConfidence = drawConfObj->valueint;
             LOG(INFO) << "Found draw_confidence=" << cJSON_Print(drawConfObj);
-        }
-        cJSON *nmsObj = cJSON_GetObjectItem(confObj, "nms");
-        if (nmsObj != nullptr && nmsObj->type == cJSON_Number) {
-            nms = nmsObj->valuedouble;
-            LOG(INFO) << "Found nms=" << nms;
         }
         cJSON *threshObj = cJSON_GetObjectItem(confObj, "thresh");
         if (threshObj != nullptr && threshObj->type == cJSON_Number) {
@@ -261,7 +257,7 @@ int processMat(SampleDetector *detector, const cv::Mat &inFrame, const char* arg
     for (auto &object : detectResult) {
         // 如果检测到有`狗`就报警
         if (strcmp(object.name.c_str(), "dog") == 0) {
-            LOG(INFO) << "Found dog:" << object.name;
+            LOG(INFO) << "Found " << object.name;
             if (drawResult) {
                 std::stringstream ss;
                 ss << object.name;
@@ -363,7 +359,7 @@ int ji_init(int argc, char **argv) {
     return authCode;
 }
 
-void ji_uninit() {
+void ji_reinit() {
 #ifdef ENABLE_JI_AUTHORIZATION
     ji_check_license(NULL, NULL, NULL, NULL, NULL, NULL, 0);
 #endif

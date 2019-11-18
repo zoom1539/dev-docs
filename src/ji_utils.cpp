@@ -38,9 +38,9 @@ void drawRectAndText(cv::Mat &img, cv::Rect &leftTopRightBottomRect, const std::
 void drawPolygon(cv::Mat &img, std::vector<std::vector<cv::Point> > polygons, cv::Scalar color, int thickness) {
     for ( size_t i = 0; i < polygons.size(); i++)
     {
-        const cv::Point* p = &polygons[i][0];
+        const cv::Point* pPoint = &polygons[i][0];
         int n = (int)polygons[i].size();
-        cv::polylines(img, &p, &n, 1, true, color, thickness, cv::LINE_AA);
+        cv::polylines(img, &pPoint, &n, 1, true, color, thickness, cv::LINE_AA);
     }
 }
 

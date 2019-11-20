@@ -197,7 +197,9 @@ int processMat(SampleDetector *detector, const cv::Mat &inFrame, const char* arg
 
      /** 解析args传入的参数，args使用json格式的字符串传入，开发者需要根据实际需求解析参数，此处示例，args内部只有一个roi参数
       * 输入的args样例：
-      * {"roi": ["POLYGON((0.21666666666666667 0.255,0.6924242424242424 0.1375,0.8833333333333333 0.72,0.4106060606060606 0.965,0.048484848484848485 0.82,0.2196969696969697 0.2575))"]}
+      * {"roi": ["POLYGON((0.21666666666666667 0.255,0.6924242424242424 0.1375,0.8833333333333333 0.72,0.4106060606060606 0.965,0.048484848484848485 0.82,0.2196969696969697 0.2575))"]
+      *  "show_result": true
+      * }
       **/
     std::vector<VectorPoint> polygons;
     if (args != nullptr && strlen(args) > 0) {
@@ -230,7 +232,10 @@ int processMat(SampleDetector *detector, const cv::Mat &inFrame, const char* arg
         }
     }
 
-    // 解析其他参数更新，接口必须支持配置文件/usr/local/ev_sdk/model/algo_config.json内参数的实时更新（即通过ji_calc_*等接口传入）
+    /**
+     * 解析其他参数并更新，根据接口规范标准，接口必须支持配置文件/usr/local/ev_sdk/model/algo_config.json内参数的实时更新功能
+     * （即通过ji_calc_*等接口传入）
+     */
     parseAndUpdateArgs(args);
     detector->setThresh(thresh);
 

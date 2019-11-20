@@ -33,7 +33,8 @@
 #ifndef EV_SDK_DEBUG
 #define EV_SDK_DEBUG 1
 #endif
-
+const int RGBA_CHANNEL_SIZE = 4;
+typedef float COLOR_TYPE[RGBA_CHANNEL_SIZE];
 cv::Mat outputFrame;        // 用于存储算法处理后的输出图像，根据ji.h的接口规范，接口实现需要负责释放该资源
 char *jsonResult = nullptr; // 用于存储算法处理后输出到JI_EVENT的json字符串，根据ji.h的接口规范，接口实现需要负责释放该资源
 
@@ -43,13 +44,16 @@ double thresh = 0.5;
 double hierThresh = 0.5;
 
 int gpuID = 0;  // 算法使用的GPU ID，算法必须实现支持从外部设置GPU ID的功能
-int textFgColor[3] = {0, 0, 0};         // 检测框顶部文字的颜色
-int textBgColor[3] = {255, 255, 255};   // 检测框顶部文字的背景颜色
-int dogRectColor[3] = {0, 255, 0};      // 检测框`dog`的颜色
+COLOR_TYPE textFgColor = {0, 0, 0, 0};         // 检测框顶部文字的颜色
+COLOR_TYPE textBgColor = {255, 255, 255, 0};   // 检测框顶部文字的背景颜色
+COLOR_TYPE dogRectColor = {0, 255, 0, 1.0f};      // 检测框`dog`的颜色
 bool drawROIArea = false;           // 是否画ROI
-int roiColor[3] = {120, 120, 120};  // ROI框的颜色
+COLOR_TYPE roiColor = {120, 120, 120, 1.0f};  // ROI框的颜色
 bool drawResult = true;         // 是否画检测框
 bool drawConfidence = false;    // 是否画置信度
+int roiLineThickness = 4;   // roi框的粗细
+int objectRectLineThickness = 4;    // 目标框粗细
+bool roiFill = false;   // 是否使用颜色填充roi区域
 
 /**
  * 从cJSON数组中获取RGB的三个通道值，并填充到color数组中
@@ -57,19 +61,18 @@ bool drawConfidence = false;    // 是否画置信度
  * @param[out] color 填充后的数组
  * @param[in] rgbArr 存储有RGB值的cJSON数组
  */
-void getColor(int (&color)[3], cJSON *rgbArr) {
-    const int RGB_CHANNEL_SIZE = 3;
-    if (int(sizeof(color) / sizeof(int)) != RGB_CHANNEL_SIZE) {
+void getColor(COLOR_TYPE &color, cJSON *rgbArr) {
+    if (int(sizeof(color) / sizeof(int)) != RGBA_CHANNEL_SIZE) {
         LOG(ERROR) << "Invalid number of channels!";
         return;
     }
-    if (rgbArr == nullptr || rgbArr->type != cJSON_Array || cJSON_GetArraySize(rgbArr) != RGB_CHANNEL_SIZE) {
+    if (rgbArr == nullptr || rgbArr->type != cJSON_Array || cJSON_GetArraySize(rgbArr) != RGBA_CHANNEL_SIZE) {
         LOG(ERROR) << "Invalid rgbArr!";
         return;
     }
-    for (int i = 0; i < RGB_CHANNEL_SIZE; ++i) {
+    for (int i = 0; i < RGBA_CHANNEL_SIZE; ++i) {
         cJSON *channelObj = cJSON_GetArrayItem(rgbArr, i);
-        color[i] = channelObj->valueint;
+        color[i] = channelObj->valuedouble;
     }
 }
 
@@ -100,24 +103,37 @@ bool parseConfigFile(const char *configFile) {
             LOG(INFO) << "Found gpu_id=" << cJSON_Print(gpuObj);
         }
         cJSON *drawROIObj = cJSON_GetObjectItem(confObj, "draw_roi_area");
-        if (drawROIObj != nullptr && (drawROIObj->type == cJSON_True || drawROIObj->type == cJSON_False)) {
+        if (drawROIObj != nullptr && cJSON_IsBool(drawROIObj)) {
             drawROIArea = drawROIObj->valueint;
             LOG(INFO) << "Found draw_roi_area=" << cJSON_Print(drawROIObj);
         }
         if (drawROIArea) {
-            cJSON *roiColorObj = cJSON_GetObjectItem(confObj, "roi_color");
-            if (roiColorObj != nullptr && roiColorObj->type == cJSON_Array) {
-                getColor(roiColor, roiColorObj);
-                LOG(INFO) << "Found roi_color=" << cJSON_Print(roiColorObj);
+            cJSON *roiColorRootObj = cJSON_GetObjectItem(confObj, "roi_color");
+            if (roiColorRootObj != nullptr && roiColorRootObj->type == cJSON_Object) {
+                LOG(INFO) << "Found roi_color=" << cJSON_Print(roiColorRootObj);
+                cJSON *roiColorValueObj = cJSON_GetObjectItem(roiColorRootObj, "value");
+                if (roiColorValueObj != nullptr && roiColorValueObj->type == cJSON_Object) {
+                    getColor(roiColor, roiColorValueObj);
+                }
+            }
+            cJSON *roiThicknessObj = cJSON_GetObjectItem(confObj, "roi_line_thickness");
+            if (roiThicknessObj != nullptr && roiThicknessObj->type == cJSON_Number) {
+                roiLineThickness = roiThicknessObj->valueint;
+                LOG(INFO) << "Found roi_line_thickness=" << cJSON_Print(roiThicknessObj);
+            }
+            cJSON *roiFillObj = cJSON_GetObjectItem(confObj, "roi_fill");
+            if (roiThicknessObj != nullptr && cJSON_IsBool(roiFillObj)) {
+                roiFill = roiFillObj->valueint;
+                LOG(INFO) << "Found roi_fill=" << cJSON_Print(roiFillObj);
             }
         }
         cJSON *drawResultObj = cJSON_GetObjectItem(confObj, "draw_result");
-        if (drawResultObj != nullptr && (drawResultObj->type == cJSON_True || drawResultObj->type == cJSON_False)) {
+        if (drawResultObj != nullptr && cJSON_IsBool(drawResultObj)) {
             drawResult = drawResultObj->valueint;
             LOG(INFO) << "Found draw_result=" << cJSON_Print(drawResultObj);
         }
         cJSON *drawConfObj = cJSON_GetObjectItem(confObj, "draw_confidence");
-        if (drawConfObj != nullptr && (drawConfObj->type == cJSON_True || drawConfObj->type == cJSON_False)) {
+        if (drawConfObj != nullptr && cJSON_IsBool(drawConfObj)) {
             drawConfidence = drawConfObj->valueint;
             LOG(INFO) << "Found draw_confidence=" << cJSON_Print(drawConfObj);
         }
@@ -126,39 +142,35 @@ bool parseConfigFile(const char *configFile) {
             thresh = threshObj->valuedouble;
             LOG(INFO) << "Found thresh=" << thresh;
         }
-        cJSON *hierThreshObj = cJSON_GetObjectItem(confObj, "hier_thresh");
-        if (hierThreshObj != nullptr && hierThreshObj->type == cJSON_Number) {
-            hierThresh = hierThreshObj->valuedouble;
-            LOG(INFO) << "Found hier_thresh=" << hierThresh;
-        }
-        cJSON *textFgColorObj = cJSON_GetObjectItem(confObj, "text_color");
-        if (textFgColorObj != nullptr && textFgColorObj->type == cJSON_Array) {
-            LOG(INFO) << "Found text_color=" << cJSON_Print(textFgColorObj);
-            getColor(textFgColor, textFgColorObj);
-        }
-        cJSON *textBgColorObj = cJSON_GetObjectItem(confObj, "text_bg_color");
-        if (textBgColorObj != nullptr && textBgColorObj->type == cJSON_Array) {
-            LOG(INFO) << "Found text_bg_color=" << cJSON_Print(textBgColorObj);
-            getColor(textBgColor, cJSON_GetObjectItem(confObj, "text_bg_color"));
-        }
-        cJSON *objectColorArr = cJSON_GetObjectItem(confObj, "object_colors");
-        if (objectColorArr != nullptr && objectColorArr->type == cJSON_Array) {
-            for (int i = 0; i < cJSON_GetArraySize(objectColorArr); ++i) {
-                cJSON *obj = cJSON_GetArrayItem(objectColorArr, i);
-                if (obj != nullptr && obj->type == cJSON_Object) {
-                    cJSON *colorObj = cJSON_GetObjectItem(obj, "dog");
-                    if (colorObj != nullptr && colorObj->type == cJSON_Array) {
-                        LOG(INFO) << "Found dog rect color=" << cJSON_Print(colorObj);
-                        getColor(dogRectColor, colorObj);
-                        break;
-                    }
-                }
+        cJSON *textFgColorRootObj = cJSON_GetObjectItem(confObj, "object_text_color");
+        if (textFgColorRootObj != nullptr && textFgColorRootObj->type == cJSON_Object) {
+            LOG(INFO) << "Found object_text_color=" << cJSON_Print(textFgColorRootObj);
+            cJSON *textFgColorValueObj = cJSON_GetObjectItem(textFgColorRootObj, "value");
+            if (textFgColorValueObj != nullptr && textFgColorValueObj->type == cJSON_Object) {
+                getColor(textFgColor, textFgColorValueObj);
             }
+        }
+        cJSON *textBgColorRootObj = cJSON_GetObjectItem(confObj, "object_text_bg_color");
+        if (textBgColorRootObj != nullptr && textBgColorRootObj->type == cJSON_Object) {
+            LOG(INFO) << "Found object_text_bg_color=" << cJSON_Print(textBgColorRootObj);
+            cJSON *textBgColorValueObj = cJSON_GetObjectItem(textBgColorRootObj, "value");
+            if (textBgColorValueObj != nullptr && textBgColorValueObj->type == cJSON_Object) {
+                getColor(textBgColor, textBgColorValueObj);
+            }
+        }
+        cJSON *objectRectLineThicknessObj = cJSON_GetObjectItem(confObj, "object_rect_line_thickness");
+        if (objectRectLineThicknessObj != nullptr && objectRectLineThicknessObj->type == cJSON_Number) {
+            objectRectLineThickness = objectRectLineThicknessObj->valueint;
+            LOG(INFO) << "Found object_rect_line_thickness=" << cJSON_Print(objectRectLineThicknessObj);
+        }
+        cJSON *dogRectColorObj = cJSON_GetObjectItem(confObj, "dog_rect_color");
+        if (dogRectColorObj != nullptr && dogRectColorObj->type == cJSON_Object) {
+            LOG(INFO) << "Found dog_rect_color=" << cJSON_Print(dogRectColorObj);
+            getColor(dogRectColor, cJSON_GetObjectItem(dogRectColorObj, "value"));
         }
 
         free(confStr);
         cJSON_Delete(confObj);
-
     } else {
         LOG(ERROR) << "Failed reading `" << configFile << "`";
         return false;
@@ -251,7 +263,7 @@ int processMat(SampleDetector *detector, const cv::Mat &inFrame, const char* arg
     inFrame.copyTo(outFrame);
     // 画ROI区域
     if (drawROIArea && !polygons.empty()) {
-        drawPolygon(outFrame, polygons, cv::Scalar(roiColor[0], roiColor[1], roiColor[2]), 2);
+        drawPolygon(outFrame, polygons, cv::Scalar(roiColor[0], roiColor[1], roiColor[2]), roiColor[3], cv::LINE_AA, roiLineThickness, roiFill);
     }
     // 判断是否要要报警并将检测到的目标画到输出图上
     for (auto &object : detectResult) {
@@ -265,8 +277,8 @@ int processMat(SampleDetector *detector, const cv::Mat &inFrame, const char* arg
                     ss.precision(2);
                     ss << std::fixed << ": " << object.prob * 100 << "%";
                 }
-                drawRectAndText(outFrame, object.rect, ss.str(), 4,
-                        cv::Scalar(dogRectColor[0], dogRectColor[1], dogRectColor[2]), 30,
+                drawRectAndText(outFrame, object.rect, ss.str(), objectRectLineThickness, cv::LINE_AA,
+                        cv::Scalar(dogRectColor[0], dogRectColor[1], dogRectColor[2]), dogRectColor[3], 30,
                         cv::Scalar(textFgColor[0], textFgColor[1], textFgColor[2]),
                         cv::Scalar(textBgColor[0], textBgColor[1], textBgColor[2]));
             }
@@ -409,7 +421,7 @@ void *ji_create_predictor(int pdtype) {
 
     int iRet = detector->init("/usr/local/ev_sdk/model/config/coco.names",
             decryptedModelStr,
-            "/usr/local/ev_sdk/model/yolov3-tiny.weights");
+            "/usr/local/ev_sdk/model/model.data");
     if (decryptedModelStr != nullptr) {
         free(decryptedModelStr);
     }

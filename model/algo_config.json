@@ -1,16 +1,27 @@
 {
     "gpu_id": 0,
     "draw_roi_area": true,
-    "roi_color": [0, 255, 0],
+    "roi_color": {
+        "type": "color_rgba",
+        "value": [0, 255, 0, 0.7]
+    },
+    "roi_line_thickness": 4,
+    "roi_fill": true,
     "draw_result": true,
     "draw_confidence": true,
     "thresh": 0.5,
-    "nms": 0.6,
-    "object_colors": [
-        {
-            "dog": [0, 0, 255]
-        }
-    ],
-    "text_color": [255, 255, 255],
-    "text_bg_color": [120, 120, 120]
+
+    "dog_rect_color": {
+        "type": "color_rgba",
+        "value": [0, 0, 255, 0.1]
+    },
+    "object_rect_line_thickness": 3,
+    "object_text_color": {
+        "type": "color_rgba",
+        "value": [255, 255, 255, 0]
+    },
+    "object_text_bg_color": {
+        "type": "color_rgba",
+        "value": [120, 120, 120, 0]
+    }
 }

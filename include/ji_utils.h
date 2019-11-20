@@ -21,13 +21,30 @@ size_t getFileLen(std::ifstream &ifs);
  * @param leftTopRightBottomRect    矩形框(x, y, width, height)，其中(x, y)是左上角坐标，(width, height)是框的宽高
  * @param text  需要画的文字
  * @param rectLineThickness 矩形框的线宽度
- * @param rectColor     矩形框的颜色
+ * @param rectLineType 矩形框的线类型，当值小于0时，将使用颜色填充整个矩形框
+ * @param rectColor    矩形框的颜色
+ * @param alpha     矩形框的透明度，范围[0,1]
  * @param fontHeight    字体高度
  * @param textColor 字体颜色
  * @param textBg    字体背景颜色
  */
 void drawRectAndText(cv::Mat &img, cv::Rect &leftTopRightBottomRect, const std::string &text, int rectLineThickness,
-                     cv::Scalar rectColor, int fontHeight, cv::Scalar textColor, cv::Scalar textBg);
+                     int rectLineType, cv::Scalar rectColor, float alpha,
+                     int fontHeight, cv::Scalar textColor, cv::Scalar textBg);
 
-void drawPolygon(cv::Mat &img, std::vector<std::vector<cv::Point> > polygons, cv::Scalar color, int thickness=3);
+/**
+ * 在输入图img上画多边形框
+ *
+ * @param img   输入图
+ * @param polygons  多边形数组，每个多边形由顺时针连接的点构成
+ * @param color     多边形框的颜色
+ * @param alpha     多边形框的透明度，范围[0,1]
+ * @param lineType  多边形框的线类型
+ * @param thickness 多边形框的宽度
+ * @param isFill    是否使用颜色填充roi区域
+ */
+void
+drawPolygon(cv::Mat &img, std::vector<std::vector<cv::Point> > polygons, const cv::Scalar &color, float alpha, int lineType,
+            int thickness = 3, bool isFill = false);
+
 #endif  // JI_UTILS

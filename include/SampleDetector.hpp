@@ -54,6 +54,8 @@ public:
      */
     static image mat_to_image(const cv::Mat &m);
 
+    bool setThresh(double thresh);
+
 
 public:
     static const int ERROR_BASE = 0x0100;

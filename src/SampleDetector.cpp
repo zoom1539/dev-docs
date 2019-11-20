@@ -125,3 +125,8 @@ image SampleDetector::mat_to_image(const cv::Mat &m) {
     rgbgr_image(im);
     return im;
 }
+
+bool SampleDetector::setThresh(double thresh) {
+    mThresh = thresh;
+    return true;
+}

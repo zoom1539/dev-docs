@@ -1,36 +1,55 @@
-# algo_config.json说明
+# algo_config.json配置文件说明
 
-配置文件目前固定字段有四项，其它的配置字段根据项目拟定，下列四个字段为固定项，务必在代码接口中实现
+### 1. 配置文件目前固定字段有四项，其它的配置字段根据项目拟定，下列字段为固定项，务必在代码接口中实现
+   - `gpu_id`：设置程序在特定序号的GPU上运行（这个参数适应GPU算法及多GPU机器，默认为0，在第一块GPU上运行，为1则在第二块GPU上运行，以此类推）
+   - `draw_roi_area`：是否在结果图片或者视频中画出ROI感兴趣区域，`true`画，`false`不画
+   - `roi_color`：ROI框的颜色，RGBA数组格式，RGB三通道的范围是[0,255]，第四个元素是透明度，范围是[0,1.0]，值越大，画的框、文字透明度越高
+   - `roi_line_thickness`：roi线框粗细
+   - `roi_fill`：是否使用颜色填充roi区域，`true`填充，`false`不填充
+   - `show_result`：是否实时显示图片或者视频结果，`true`显示，`false`不显示
+   - `roi_fill`：是否使用颜色填充roi区域，`true`填充，`false`不填充
 
-- `gpu_id`：设置程序在特定序号的GPU上运行（这个参数适应GPU算法及多GPU机器，默认为0，在第一块GPU上运行，为1则在第二块GPU上运行，以此类推）
-- `draw_roi_area`：是否在结果图片或者视频中画出ROI感兴趣区域，`true`画，`false`不画
-- `roi_color`：ROI框的颜色，RGB数组格式
-- `show_result`：是否实时显示图片或者视频结果，`true`显示，`false`不显示
-- `draw_result`：是否画出检测到的物体结果框 `true`画，`false`：不画
-- `draw_confidence`：是否将置信度画在框顶部
-- `thresh`：检测阈值，设置越大，召回率越高，设置越小，精确率越高
-- `object_colors`：不同目标框的颜色，RGB数组格式
-- `text_color`：目标框顶部文字的颜色
-- `text_bg_color`：目标框顶部文字的背景颜色
+### 2. 开发者自行扩展的可配置参数
+    
+   - `draw_confidence`：是否将置信度画在框顶部，`true`显示，`false`不显示
+   - `thresh`：检测阈值，设置越大，召回率越高，设置越小，精确率越高
+   - `object_colors`：不同目标框的颜色，RGBA数组格式，RGB三通道的范围是[0,255]，第四个元素是透明度，范围是[0,1.0]，值越大，画的框、文字透明度越高
+   - `object_text_color`：目标框顶部文字的颜色，RGBA数组格式，RGB三通道的范围是[0,255]，第四个元素不使用
+   - `object_text_bg_color`：目标框顶部文字的背景颜色，RGBA数组格式，RGB三通道的范围是[0,255]，第四个元素不使用
 
-样例配置文件
-```json
-{
-    "gpu_id": 0,
-    "draw_roi_area": true,
-    "roi_color": [0, 255, 0],
-    "draw_result": true,
-    "draw_confidence": true,
-    "thresh": 0.5,
-    "object_colors": [
+        样例配置文件
+        ```json
         {
-            "dog": [0, 0, 255]
+            "gpu_id": 0,
+            "draw_roi_area": true,
+            "roi_color": {
+                "type": "color_rgba",
+                "value": [0, 255, 0, 0.7]
+            },
+            "roi_line_thickness": 4,
+            "roi_fill": true,
+            "draw_result": true,
+            "draw_confidence": true,
+            "thresh": 0.5,
+        
+            "dog_rect_color": {
+                "type": "color_rgba",
+                "value": [0, 0, 255, 0.1]
+            },
+            "object_rect_line_thickness": 3,
+            "object_text_color": {
+                "type": "color_rgba",
+                "value": [255, 255, 255, 0]
+            },
+            "object_text_bg_color": {
+                "type": "color_rgba",
+                "value": [120, 120, 120, 0]
+            }
         }
-    ],
-    "text_color": [255, 255, 255],
-    "text_bg_color": [120, 120, 120]
-}
-
-```
-# model.data
-模型数据
+        ```
+ ### 3. 参数实时更新功能
+ 除了`gpu_id`等必须在算法初始化时才能够更新的参数外，其他可配置参数必须支持能够在调用`ji_calc_frame`、`ji_calc_buffer`、`ji_calc_file`、`ji_calc_video_file`四个接口时，进行实时更新。
+ 也就是必须要在`ji_calc_*`等接口的`args`参数中，加入这些可配置项。
+ 
+# 模型命名
+模型数据，当模型只有一个时，请使用固定名字`model.dat`，当有多个时，请使用`model-[n].dat`格式，`n`表示模型序号。

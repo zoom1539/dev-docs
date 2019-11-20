@@ -61,13 +61,9 @@ bool roiFill = false;   // 是否使用颜色填充roi区域
  * @param[out] color 填充后的数组
  * @param[in] rgbArr 存储有RGB值的cJSON数组
  */
-void getColor(COLOR_TYPE &color, cJSON *rgbArr) {
-    if (int(sizeof(color) / sizeof(int)) != RGBA_CHANNEL_SIZE) {
-        LOG(ERROR) << "Invalid number of channels!";
-        return;
-    }
+void getRGBAColor(COLOR_TYPE &color, cJSON *rgbArr) {
     if (rgbArr == nullptr || rgbArr->type != cJSON_Array || cJSON_GetArraySize(rgbArr) != RGBA_CHANNEL_SIZE) {
-        LOG(ERROR) << "Invalid rgbArr!";
+        LOG(ERROR) << "Invalid RGBA value!";
         return;
     }
     for (int i = 0; i < RGBA_CHANNEL_SIZE; ++i) {
@@ -77,24 +73,19 @@ void getColor(COLOR_TYPE &color, cJSON *rgbArr) {
 }
 
 /**
- * 解析配置文件`/usr/local/ev_sdk/model/algo_conf.json`
+ * 解析配置json格式的配置参数
  *
- * @param[in] configFile 配置文件
+ * @param[in] configStr 配置参数字符串
  * @return 成功解析true，否则返回false
  */
-bool parseConfigFile(const char *configFile) {
-    LOG(INFO) << "Parsing configuration file: " << configFile;
-
-    std::ifstream confIfs(configFile);
-    if (confIfs.is_open()) {
-        size_t len = getFileLen(confIfs);
-        char *confStr = new char[len + 1];
-        confIfs.read(confStr, len);
-        confStr[len] = '\0';
+bool parseAndUpdateArgs(const char *confStr) {
+    if (confStr == nullptr) {
+        return false;
+    }
 
         cJSON *confObj = cJSON_Parse(confStr);
         if (confObj == nullptr) {
-            LOG(ERROR) << "Failed parsing `" << configFile << "`";
+            LOG(ERROR) << "Failed parsing `" << confStr << "`";
             return false;
         }
         cJSON *gpuObj = cJSON_GetObjectItem(confObj, "gpu_id");
@@ -113,7 +104,7 @@ bool parseConfigFile(const char *configFile) {
                 LOG(INFO) << "Found roi_color=" << cJSON_Print(roiColorRootObj);
                 cJSON *roiColorValueObj = cJSON_GetObjectItem(roiColorRootObj, "value");
                 if (roiColorValueObj != nullptr && roiColorValueObj->type == cJSON_Object) {
-                    getColor(roiColor, roiColorValueObj);
+                    getRGBAColor(roiColor, roiColorValueObj);
                 }
             }
             cJSON *roiThicknessObj = cJSON_GetObjectItem(confObj, "roi_line_thickness");
@@ -147,7 +138,7 @@ bool parseConfigFile(const char *configFile) {
             LOG(INFO) << "Found object_text_color=" << cJSON_Print(textFgColorRootObj);
             cJSON *textFgColorValueObj = cJSON_GetObjectItem(textFgColorRootObj, "value");
             if (textFgColorValueObj != nullptr && textFgColorValueObj->type == cJSON_Object) {
-                getColor(textFgColor, textFgColorValueObj);
+                getRGBAColor(textFgColor, textFgColorValueObj);
             }
         }
         cJSON *textBgColorRootObj = cJSON_GetObjectItem(confObj, "object_text_bg_color");
@@ -155,7 +146,7 @@ bool parseConfigFile(const char *configFile) {
             LOG(INFO) << "Found object_text_bg_color=" << cJSON_Print(textBgColorRootObj);
             cJSON *textBgColorValueObj = cJSON_GetObjectItem(textBgColorRootObj, "value");
             if (textBgColorValueObj != nullptr && textBgColorValueObj->type == cJSON_Object) {
-                getColor(textBgColor, textBgColorValueObj);
+                getRGBAColor(textBgColor, textBgColorValueObj);
             }
         }
         cJSON *objectRectLineThicknessObj = cJSON_GetObjectItem(confObj, "object_rect_line_thickness");
@@ -166,15 +157,10 @@ bool parseConfigFile(const char *configFile) {
         cJSON *dogRectColorObj = cJSON_GetObjectItem(confObj, "dog_rect_color");
         if (dogRectColorObj != nullptr && dogRectColorObj->type == cJSON_Object) {
             LOG(INFO) << "Found dog_rect_color=" << cJSON_Print(dogRectColorObj);
-            getColor(dogRectColor, cJSON_GetObjectItem(dogRectColorObj, "value"));
+            getRGBAColor(dogRectColor, cJSON_GetObjectItem(dogRectColorObj, "value"));
         }
 
-        free(confStr);
         cJSON_Delete(confObj);
-    } else {
-        LOG(ERROR) << "Failed reading `" << configFile << "`";
-        return false;
-    }
     return true;
 }
 
@@ -211,11 +197,7 @@ int processMat(SampleDetector *detector, const cv::Mat &inFrame, const char* arg
 
      /** 解析args传入的参数，args使用json格式的字符串传入，开发者需要根据实际需求解析参数，此处示例，args内部只有一个roi参数
       * 输入的args样例：
-      * {
-      *     "roi": [
-      *         "POLYGON((0.21666666666666667 0.255,0.6924242424242424 0.1375,0.8833333333333333 0.72,0.4106060606060606 0.965,0.048484848484848485 0.82,0.2196969696969697 0.2575))"
-      *     ]
-      * }
+      * {"roi": ["POLYGON((0.21666666666666667 0.255,0.6924242424242424 0.1375,0.8833333333333333 0.72,0.4106060606060606 0.965,0.048484848484848485 0.82,0.2196969696969697 0.2575))"]}
       **/
     std::vector<VectorPoint> polygons;
     if (args != nullptr && strlen(args) > 0) {
@@ -247,6 +229,10 @@ int processMat(SampleDetector *detector, const cv::Mat &inFrame, const char* arg
             cJSON_Delete(argsObj);
         }
     }
+
+    // 解析其他参数更新，接口必须支持配置文件/usr/local/ev_sdk/model/algo_config.json内参数的实时更新（即通过ji_calc_*等接口传入）
+    parseAndUpdateArgs(args);
+    detector->setThresh(thresh);
 
     // 算法处理
     std::vector<SampleDetector::Object> detectResult;
@@ -366,7 +352,19 @@ int ji_init(int argc, char **argv) {
 
     // 从统一的配置文件读取配置参数，SDK实现必须支持从这个统一的配置文件中读取算法&业务逻辑相关的配置参数
     const char *configFile = "/usr/local/ev_sdk/model/algo_config.json";
-    parseConfigFile(configFile);
+    LOG(INFO) << "Parsing configuration file: " << configFile;
+
+    std::ifstream confIfs(configFile);
+    if (confIfs.is_open()) {
+        size_t len = getFileLen(confIfs);
+        char *confStr = new char[len + 1];
+        confIfs.read(confStr, len);
+        confStr[len] = '\0';
+
+        parseAndUpdateArgs(confStr);
+        delete[] confStr;
+        confIfs.close();
+    }
 
     return authCode;
 }
@@ -406,8 +404,8 @@ void *ji_create_predictor(int pdtype) {
     decryptedModelStr = tmp;
     LOG(INFO) << "Decrypted model size:" << strlen(decryptedModelStr);
 
-    // 获取解密后的文件句柄
-    // file *file = (file *) FetchFile(h);
+    // 如何想要使用解密后的文件句柄，请调用这个接口
+    // FILE *file = (file *) FetchFile(h);
 
     DestroyDecrtptor(h);
 #else

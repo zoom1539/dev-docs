@@ -103,7 +103,7 @@ bool parseAndUpdateArgs(const char *confStr) {
             if (roiColorRootObj != nullptr && roiColorRootObj->type == cJSON_Object) {
                 LOG(INFO) << "Found roi_color=" << cJSON_Print(roiColorRootObj);
                 cJSON *roiColorValueObj = cJSON_GetObjectItem(roiColorRootObj, "value");
-                if (roiColorValueObj != nullptr && roiColorValueObj->type == cJSON_Object) {
+                if (roiColorValueObj != nullptr && roiColorValueObj->type == cJSON_Array) {
                     getRGBAColor(roiColor, roiColorValueObj);
                 }
             }
@@ -137,7 +137,7 @@ bool parseAndUpdateArgs(const char *confStr) {
         if (textFgColorRootObj != nullptr && textFgColorRootObj->type == cJSON_Object) {
             LOG(INFO) << "Found object_text_color=" << cJSON_Print(textFgColorRootObj);
             cJSON *textFgColorValueObj = cJSON_GetObjectItem(textFgColorRootObj, "value");
-            if (textFgColorValueObj != nullptr && textFgColorValueObj->type == cJSON_Object) {
+            if (textFgColorValueObj != nullptr && textFgColorValueObj->type == cJSON_Array) {
                 getRGBAColor(textFgColor, textFgColorValueObj);
             }
         }
@@ -145,7 +145,7 @@ bool parseAndUpdateArgs(const char *confStr) {
         if (textBgColorRootObj != nullptr && textBgColorRootObj->type == cJSON_Object) {
             LOG(INFO) << "Found object_text_bg_color=" << cJSON_Print(textBgColorRootObj);
             cJSON *textBgColorValueObj = cJSON_GetObjectItem(textBgColorRootObj, "value");
-            if (textBgColorValueObj != nullptr && textBgColorValueObj->type == cJSON_Object) {
+            if (textBgColorValueObj != nullptr && textBgColorValueObj->type == cJSON_Array) {
                 getRGBAColor(textBgColor, textBgColorValueObj);
             }
         }

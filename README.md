@@ -58,20 +58,25 @@ make install
 
 #### 测试示例程序和接口规范
 
-执行完成之后，`/usr/local/ev_sdk/lib`下将生成`libji.so`和相关的依赖库，以及`/usr/local/ev_sdk/bin/`下的测试程序。
+执行完成之后，`/usr/local/ev_sdk/lib`下将生成`libji.so`和相关的依赖库，以及`/usr/local/ev_sdk/bin/`下的测试程序`test-ji-api`。
 
-1. 要使用`/usr/local/ev_sdk/test-ji-api`测试`EV_SDK`的接口，需要重新生成授权所使用的参考码`reference.txt`，并使用私钥对其进行加密后重新生成授权文件`license.txt`
+1. 要使用`/usr/local/ev_sdk/bin/test-ji-api`测试`EV_SDK`的接口，需要重新生成授权所使用的参考码`reference.txt`，并使用私钥对其进行加密后重新生成授权文件`license.txt`
 
    ```shell
-   cd /usr/local/ev_sdk/build/authorization/
-   /usr/local/ev_sdk/3rd/license/v10/tools/ev_license -r reference.txt
-   /usr/locak/ev_sdk/3rd/license/v10/tools/ev_license -l privateKey.pem reference.txt license.txt
+   # 生成公私钥
+   mkdir -p /usr/local/ev_sdk/authorization
+   cd /usr/local/ev_sdk/authorization/
+   /usr/local/ev_sdk/3rd/license/v20_0/bin/generateRsaKey.sh
+   # 生成参考文件
+   /usr/local/ev_sdk/3rd/license/v20_0/bin/ev_license -r reference.txt
+   # 生成授权文件
+   /usr/locak/ev_sdk/3rd/license/v20_0/bin/ev_license -l privateKey.pem reference.txt license.txt
    ```
 
 2. 使用`test-ji-api`测试`ji_calc_frame`接口，测试添加了一个`ROI`参数
 
    ```shell
-   /usr/local/ev_sdk/bin/test-ji-api -f ji_calc_frame -i /usr/local/ev_sdk/data/dog.jpg -o /tmp/output.jpg -l /usr/local/ev_sdk/build/license.txt -a "{\"roi\":\"POLYGON((0.21666666666666667 0.255,0.6924242424242424 0.1375,0.8833333333333333 0.72,0.4106060606060606 0.965,0.048484848484848485 0.82,0.2196969696969697 0.2575))\"}"
+   /usr/local/ev_sdk/bin/test-ji-api -f ji_calc_frame -i /usr/local/ev_sdk/data/dog.jpg -o /tmp/output.jpg -l /usr/local/ev_sdk/build/license.txt -a "{\"roi\":[\"POLYGON((0.21666666666666667 0.255,0.6924242424242424 0.1375,0.8833333333333333 0.72,0.4106060606060606 0.965,0.048484848484848485 0.82,0.2196969696969697 0.2575))\"]}"
    ```
 
    输出内容样例：
@@ -110,19 +115,19 @@ mv dev-docs /usr/local/ev_sdk
 1. 使用`EV_SDK`提供的工具生成公钥和私钥
 
    ```shell
-   mkdir -p /usr/local/ev_sdk/build/authorization
-   cd /usr/local/ev_sdk/build/authorization
-   /usr/local/3rd/license/v10/tools/generateRsaKey.sh
+   mkdir -p /usr/local/ev_sdk/authorization
+   cd /usr/local/ev_sdk/authorization
+   /usr/local/3rd/license/v20_0/bin/generateRsaKey.sh
    ```
 
-   执行成功后将生成公钥`build/authorization/pubKey.perm`和私钥`build/authorization/privateKey.pem`。
+   执行成功后将生成公钥`authorization/pubKey.perm`和私钥`authorization/privateKey.pem`。
 
 2. 将公钥转换成`C++`头文件
 
    ```shell
-   /usr/local/ev_sdk/3rd/license/v10/tools/ev_codec -c build/authorization/pubKey.perm build/authorization/pubKey.hpp
+   /usr/local/ev_sdk/3rd/license/v20_0/bin/ev_codec -c authorization/pubKey.perm authorization/pubKey.hpp
    # 将头文件移动到代码处
-   mv /usr/local/ev_sdk/build/authorization/pubKey.hpp /usr/local/ev_sdk/include
+   mv /usr/local/ev_sdk/authorization/pubKey.hpp /usr/local/ev_sdk/include
    ```
 
    这个包含公钥的头文件将被**硬编码**到`libji.so`。
@@ -144,15 +149,15 @@ mv dev-docs /usr/local/ev_sdk
 1. 使用`EV_SDK`提供的工具加密模型，并生成`C++`头文件，**这里仅仅示例加密`yolov3-tiny.cfg`文件，请根据实际需要，对重要的模型/权重文件进行加密**
 
    ```shell
-   mkdir -p /usr/local/ev_sdk/build/model_encryption/
-   cd /usr/local/ev_sdk/build/model_encryption/
+   mkdir -p /usr/local/ev_sdk/model_encryption/
+   cd /usr/local/ev_sdk/model_encryption/
    /usr/local/3rd/ev_encrypt_module/bin/encrypt_tool /usr/local/ev_sdk/model/yolov3-tiny.cfg
    ```
 
    执行成功后会生成加密后的文件`model_str.hpp`，`encrypt_tool`程序支持在加密模型时指定一个混淆字符串，具体方法请执行`encrypt_tool`参考帮助文档。将头文件移动到代码区
 
    ```shell
-   mv /usr/local/ev_sdk/build/model_encryption/model_str.hpp /usr/local/ev_sdk/include
+   mv /usr/local/ev_sdk/model_encryption/model_str.hpp /usr/local/ev_sdk/include
    ```
 
    这个加密后的模型将被**硬编码**到`libji.so`。
@@ -198,13 +203,14 @@ make install
    1. 使用`EV_SDK`提供的工具生成与当前主机关联的硬件参考码
 
       ```shell
-      /usr/local/ev_sdk/3rd/license/v10/tools/ev_license -r build/authorization/reference.txt
+      cd /usr/local/ev_sdk/
+      /usr/local/ev_sdk/3rd/license/v20_0/bin/ev_license -r authorization/reference.txt
       ```
 
    2. 使用私钥加密参考码，并生成授权文件`license.txt`
 
       ```shell
-      /usr/local/ev_sdk/3rd/license/v10/tools/ev_license -l build/authorization/privateKey.pem build/authorization/reference.txt build/authorization/license.txt
+      /usr/local/ev_sdk/3rd/license/v20_0/tools/ev_license -l authorization/privateKey.pem authorization/reference.txt authorization/license.txt
       ```
 
 2. 检查授权功能和`ji.h`的接口规范性
@@ -215,13 +221,11 @@ make install
    /usr/local/ev_sdk/bin/test-ji-api -f ji_calc_frame \
    -i /usr/local/ev_sdk/data/dog.jpg \
    -o /tmp/output.jpg \
-   -l /usr/local/ev_sdk/bin/license.txt \
-   -a "{\"roi\":\"POLYGON((0.21666666666666667 0.255,0.6924242424242424 0.1375,0.8833333333333333 0.72,0.4106060606060606 0.965,0.048484848484848485 0.82,0.2196969696969697 0.2575))\"}"
+   -l /usr/local/ev_sdk/authorization/license.txt \
+   -a "{\"roi\":[\"POLYGON((0.21666666666666667 0.255,0.6924242424242424 0.1375,0.8833333333333333 0.72,0.4106060606060606 0.965,0.048484848484848485 0.82,0.2196969696969697 0.2575))\"]}"
    ```
    
    接口测试程序的详细功能请查阅`test-ji-api --help`的帮助文档及其代码[test.cpp](test/src/test.cpp)
-
-> 将算法封装成`EV_SDK`接口的`libji.so`之后，请把`/usr/local/ev_sdk/model_str.hpp`和`/usr/local/ev_sdk/pubKey.hpp`删除，并保存私钥`privateKey.pem`。这样就可以使用`privateKey.pem`对所开发算法进行授权。
 
 ## 哪些内容必须完成才能通过测试？
 #### 按照需求实现接口（由项目经理告知）
@@ -285,13 +289,14 @@ make install
      - `draw_roi_area`：`true`或者`false`，是否在输出图中绘制`roi`分析区域；
      - `roi_line_thickness`：ROI区域的边框粗细；
      - `roi_fill`：是否使用颜色填充ROI区域；
-     - `roi_color`：`roi`框的颜色，以RGBA表示的数组，如`[0, 255, 0]`，参考[model/README.md](model/README.md)；
+     - `roi_color`：`roi`框的颜色，以BGRA表示的数组，如`[0, 255, 0, 0]`，参考[model/README.md](model/README.md)；
+     - `roi`：针对图片的感兴趣区域进行分析，如果没有此参数或者此参数解析错误，则roi默认值为整张图片区域；
      - ` thresh`：算法阈值，需要有可以调整算法灵敏度、召回率、精确率的阈值参数，如果算法配置项有多个参数，请自行扩展，所有与算法效果相关并且可以变动的参数**必须**在`/usr/local/ev_sdk/modek/README.md`中提供详细的配置方法和说明（包括类型、取值范围、建议值、默认值、对算法效果的影响等）；
      - ` draw_result`：`true`或者`false`，是否绘制分析结果，比如示例程序中，如果检测到狗，是否将检测框和文字画在输出图中；
      - `draw_confidence`：`true`或者`false`，是否将置信度画在检测框顶部；
-     - `obj_rect_color`：RGBA格式，参考[model/README.md](model/README.md)，所检测目标框的颜色，如果有多个目标的颜色不同，需要自行定义，例如红色安全帽和白色安全帽：`red_hat_rect_color`、`white_hat_rect_color`；
-     - `object_text_color`：检测框顶部文字的颜色，以RGBA表示的数组，如`[0, 255, 0, 0]`，参考[model/README.md](model/README.md)；
-     - `object_text_bg_color`：检测框顶部文字的背景颜色，以RGBA表示的数组，如`[0, 255, 0, 0]`，参考[model/README.md](model/README.md)；
+     - `obj_rect_color`：BGRA格式，参考[model/README.md](model/README.md)，所检测目标框的颜色，如果有多个目标的颜色不同，需要自行定义，例如红色安全帽和白色安全帽：`red_hat_rect_color`、`white_hat_rect_color`；
+     - `object_text_color`：检测框顶部文字的颜色，以BGRA表示的数组，如`[0, 255, 0, 0]`，参考[model/README.md](model/README.md)；
+     - `object_text_bg_color`：检测框顶部文字的背景颜色，以BGRA表示的数组，如`[0, 255, 0, 0]`，参考[model/README.md](model/README.md)；
      - 所有`json`内的键名称必须是小写字母，并且单词间以下划线分隔，如上面几个示例。
    - **必须支持参数实时更新**。除了`gpu_id`等必须在算法初始化时才能够更新的参数外，其他可配置参数必须支持能够在调用`ji_calc_frame`、`ji_calc_buffer`、`ji_calc_file`、`ji_calc_video_file`四个接口时，进行实时更新。也就是必须要在`ji_calc_*`等接口的`args`参数中，加入这些可配置项。
 
@@ -306,8 +311,9 @@ make install
    * 最终编译生成的`libji.so`必须自行链接必要的库，`test-ji-api`不会链接除`/usr/local/ev_sdk/lib/libji.so`以外的算法依赖库；
    * 如果`libji.so`依赖了系统动态库搜索路径（如`/usr/lib`，`/lib`等）以外的库，必须将其安装到`/usr/local/ev_sdk/lib`下，可以使用`ldd /usr/local/ev_sdk/lib/libji.so`查看`libji.so`是否正确链接了所有的依赖库。
    * **务必删除源代码和授权文件**
-     * `/usr/local/ev_sdk/src/`下的C&C++代码；
-     * 授权生成的私钥`privateKey.pem`；
+     * 第一次提交算法时，请将生成的私钥`privateKey.pem`和公钥`publicKey.pem`放到`/usr/local/ev_sdk/bin`下。**并请自行保存一份，后续算法迭代过程都会使用第一次提交的公私钥，不能重新生成**。并且后续提交必须将这两个文件都删除。
+     * 删除`/usr/local/ev_sdk/src/`下的C&C++源代码；
+     * 将算法封装成`EV_SDK`接口的`libji.so`之后，请把`/usr/local/ev_sdk/include/model_str.hpp`和`/usr/local/ev_sdk/include/pubKey.hpp`删除；
 
 
 ## FAQ
@@ -335,7 +341,7 @@ make install
 
 ### 为什么运行`test-ji-api`时，会提示找不到链接库？
 
-由于`test-ji-api`对于算法而言，只链接了`/usr/local/ev_sdk/lib/libji.so`库，如果`test-ji-api`运行过程中，找不到某些库，那么很可能是`libji.so`的某些库找不到了。此时
+由于`test-ji-api`对于算法而言，只链接了`/usr/local/ev_sdk/lib/libji.so`库，如果`test-ji-api`运行过程中，找不到某些库，那么很可能是`libji.so`依赖的某些库找不到了。此时
 
 1. 可以使用`ldd /usr/local/ev_sdk/lib/libji.so`检查是否所有链接库都可以找到；
 2. 请按照规范将系统动态库搜索路径以外的库放在`/usr/local/ev_sdk/lib`目录下。
@@ -355,7 +361,7 @@ make install
    -f ji_calc_frame \
    -i /path/to/test.jpg \
    -l /path/to/license.txt \
-   -a "{\"roi\":\"POLYGON((0.21666666666666667 0.255,0.6924242424242424 0.1375,0.8833333333333333 0.72,0.4106060606060606 0.965,0.048484848484848485 0.82,0.2196969696969697 0.2575))\"}"
+   -a "{\"roi\":[\"POLYGON((0.21666666666666667 0.255,0.6924242424242424 0.1375,0.8833333333333333 0.72,0.4106060606060606 0.965,0.048484848484848485 0.82,0.2196969696969697 0.2575))\"]}"
    ```
 
 3. 保存输出图片：

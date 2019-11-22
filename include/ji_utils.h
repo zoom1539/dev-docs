@@ -25,8 +25,8 @@ size_t getFileLen(std::ifstream &ifs);
  * @param rectColor    矩形框的颜色
  * @param alpha     矩形框的透明度，范围[0,1]
  * @param fontHeight    字体高度
- * @param textColor 字体颜色
- * @param textBg    字体背景颜色
+ * @param textColor 字体颜色，BGR格式
+ * @param textBg    字体背景颜色，BGR格式
  */
 void drawRectAndText(cv::Mat &img, cv::Rect &leftTopRightBottomRect, const std::string &text, int rectLineThickness,
                      int rectLineType, cv::Scalar rectColor, float alpha,
@@ -37,7 +37,7 @@ void drawRectAndText(cv::Mat &img, cv::Rect &leftTopRightBottomRect, const std::
  *
  * @param img   输入图
  * @param polygons  多边形数组，每个多边形由顺时针连接的点构成
- * @param color     多边形框的颜色
+ * @param color     多边形框的颜色，BGR格式
  * @param alpha     多边形框的透明度，范围[0,1]
  * @param lineType  多边形框的线类型
  * @param thickness 多边形框的宽度

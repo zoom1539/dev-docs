@@ -33,8 +33,8 @@
 #ifndef EV_SDK_DEBUG
 #define EV_SDK_DEBUG 1
 #endif
-const int RGBA_CHANNEL_SIZE = 4;
-typedef float COLOR_TYPE[RGBA_CHANNEL_SIZE];
+const int BGRA_CHANNEL_SIZE = 4;
+typedef float COLOR_BGRA_TYPE[BGRA_CHANNEL_SIZE];
 cv::Mat outputFrame;        // 用于存储算法处理后的输出图像，根据ji.h的接口规范，接口实现需要负责释放该资源
 char *jsonResult = nullptr; // 用于存储算法处理后输出到JI_EVENT的json字符串，根据ji.h的接口规范，接口实现需要负责释放该资源
 
@@ -44,38 +44,103 @@ double thresh = 0.5;
 double hierThresh = 0.5;
 
 int gpuID = 0;  // 算法使用的GPU ID，算法必须实现支持从外部设置GPU ID的功能
-COLOR_TYPE textFgColor = {0, 0, 0, 0};         // 检测框顶部文字的颜色
-COLOR_TYPE textBgColor = {255, 255, 255, 0};   // 检测框顶部文字的背景颜色
-COLOR_TYPE dogRectColor = {0, 255, 0, 1.0f};      // 检测框`dog`的颜色
 bool drawROIArea = false;           // 是否画ROI
-COLOR_TYPE roiColor = {120, 120, 120, 1.0f};  // ROI框的颜色
+COLOR_BGRA_TYPE roiColor = {120, 120, 120, 1.0f};  // ROI框的颜色
+int roiLineThickness = 4;   // ROI框的粗细
+bool roiFill = false;   // 是否使用颜色填充ROI区域
 bool drawResult = true;         // 是否画检测框
 bool drawConfidence = false;    // 是否画置信度
-int roiLineThickness = 4;   // roi框的粗细
-int objectRectLineThickness = 4;    // 目标框粗细
-bool roiFill = false;   // 是否使用颜色填充roi区域
+int dogRectLineThickness = 4;   // 目标框粗细
+
+
+std::string dogRectText("dog");    // 检测目标框顶部文字
+COLOR_BGRA_TYPE dogRectColor = {0, 255, 0, 1.0f};      // 检测框`mark`的颜色
+COLOR_BGRA_TYPE textFgColor = {0, 0, 0, 0};         // 检测框顶部文字的颜色
+COLOR_BGRA_TYPE textBgColor = {255, 255, 255, 0};   // 检测框顶部文字的背景颜色
+int dogTextHeight = 30;  // 目标框顶部字体大小
+
+int warningTextSize = 40;   // 画到图上的报警文字大小
+std::string warningText("WARNING!");    // 画到图上的报警文字
+COLOR_BGRA_TYPE warningTextFg = {255, 255, 255, 0}; // 报警文字颜色
+COLOR_BGRA_TYPE warningTextBg = {0, 0, 255, 0}; // 报警文字背景颜色
+
+std::vector<cv::Rect> currentROIRects; // 矩形roi区域
+std::vector<VectorPoint> currentROIOrigPolygons;    // Original roi polygons
+std::vector<std::string> origROIArgs;
+cv::Size currentInFrameSize(0, 0);  // 当前处理帧的尺寸
 
 /**
  * 从cJSON数组中获取RGB的三个通道值，并填充到color数组中
  *
  * @param[out] color 填充后的数组
- * @param[in] rgbArr 存储有RGB值的cJSON数组
+ * @param[in] bgraArr 存储有BGRA值的cJSON数组
  */
-void getRGBAColor(COLOR_TYPE &color, cJSON *rgbArr) {
-    if (rgbArr == nullptr || rgbArr->type != cJSON_Array || cJSON_GetArraySize(rgbArr) != RGBA_CHANNEL_SIZE) {
+void getBGRAColor(COLOR_BGRA_TYPE &color, cJSON *rgbArr) {
+    if (rgbArr == nullptr || rgbArr->type != cJSON_Array || cJSON_GetArraySize(rgbArr) != BGRA_CHANNEL_SIZE) {
         LOG(ERROR) << "Invalid RGBA value!";
         return;
     }
-    for (int i = 0; i < RGBA_CHANNEL_SIZE; ++i) {
+    for (int i = 0; i < BGRA_CHANNEL_SIZE; ++i) {
         cJSON *channelObj = cJSON_GetArrayItem(rgbArr, i);
         color[i] = channelObj->valuedouble;
     }
 }
 
 /**
- * 解析配置json格式的配置参数
+ * 当输入尺寸更新ROI
+ **/
+void onInFrameSizeChanged(int newWidth, int newHeight) {
+    LOG(INFO) << "on input frame size changed:(" << newWidth << ", " << newHeight << ")";
+    if (newWidth <= 0 || newHeight <= 0) {
+        return;
+    }
+
+    currentInFrameSize.width = newWidth;
+    currentInFrameSize.height = newHeight;
+    currentROIOrigPolygons.clear();
+    currentROIRects.clear();
+
+    VectorPoint currentFramePolygon;
+    currentFramePolygon.emplace_back(cv::Point(0, 0));
+    currentFramePolygon.emplace_back(cv::Point(currentInFrameSize.width, 0));
+    currentFramePolygon.emplace_back(cv::Point(currentInFrameSize.width, currentInFrameSize.height));
+    currentFramePolygon.emplace_back(cv::Point(0, currentInFrameSize.height));
+
+    WKTParser wktParser(cv::Size(newWidth, newHeight));
+    for (auto &roiStr : origROIArgs) {
+        LOG(WARNING) << "parsing roi:" << roiStr;
+        VectorPoint polygon;
+        wktParser.parsePolygon(roiStr, &polygon);
+        bool isPolygonValid = true;
+        for (auto &point : polygon) {
+            if (!wktParser.inPolygon(currentFramePolygon, point)) {
+                LOG(ERROR) << "point " << point << " not in polygon!";
+                isPolygonValid = false;
+                break;
+            }
+        }
+        if (!isPolygonValid) {
+            LOG(ERROR) << "roi " << roiStr << " not valid! skipped!";
+            continue;
+        }
+        currentROIOrigPolygons.emplace_back(polygon);
+    }
+    if (currentROIOrigPolygons.empty()) {
+        currentROIOrigPolygons.emplace_back(currentFramePolygon);
+        LOG(WARNING) << "Using the whole image as roi!";
+    }
+
+    for (auto &roiPolygon : currentROIOrigPolygons) {
+        cv::Rect rect;
+        wktParser.polygon2Rect(roiPolygon, rect);
+        currentROIRects.emplace_back(rect);
+    }
+}
+
+/**
+ * 解析json格式的配置参数
  *
- * @param[in] configStr 配置参数字符串
+ * @param[in] configStr json格式的配置参数字符串
  * @return 成功解析true，否则返回false
  */
 bool parseAndUpdateArgs(const char *confStr) {
@@ -83,84 +148,133 @@ bool parseAndUpdateArgs(const char *confStr) {
         return false;
     }
 
-        cJSON *confObj = cJSON_Parse(confStr);
-        if (confObj == nullptr) {
-            LOG(ERROR) << "Failed parsing `" << confStr << "`";
-            return false;
-        }
-        cJSON *gpuObj = cJSON_GetObjectItem(confObj, "gpu_id");
-        if (gpuObj != nullptr && gpuObj->type == cJSON_Number) {
-            gpuID = gpuObj->valueint;
-            LOG(INFO) << "Found gpu_id=" << cJSON_Print(gpuObj);
-        }
-        cJSON *drawROIObj = cJSON_GetObjectItem(confObj, "draw_roi_area");
-        if (drawROIObj != nullptr && cJSON_IsBool(drawROIObj)) {
-            drawROIArea = drawROIObj->valueint;
-            LOG(INFO) << "Found draw_roi_area=" << cJSON_Print(drawROIObj);
-        }
-        if (drawROIArea) {
-            cJSON *roiColorRootObj = cJSON_GetObjectItem(confObj, "roi_color");
-            if (roiColorRootObj != nullptr && roiColorRootObj->type == cJSON_Object) {
-                LOG(INFO) << "Found roi_color=" << cJSON_Print(roiColorRootObj);
-                cJSON *roiColorValueObj = cJSON_GetObjectItem(roiColorRootObj, "value");
-                if (roiColorValueObj != nullptr && roiColorValueObj->type == cJSON_Array) {
-                    getRGBAColor(roiColor, roiColorValueObj);
-                }
-            }
-            cJSON *roiThicknessObj = cJSON_GetObjectItem(confObj, "roi_line_thickness");
-            if (roiThicknessObj != nullptr && roiThicknessObj->type == cJSON_Number) {
-                roiLineThickness = roiThicknessObj->valueint;
-                LOG(INFO) << "Found roi_line_thickness=" << cJSON_Print(roiThicknessObj);
-            }
-            cJSON *roiFillObj = cJSON_GetObjectItem(confObj, "roi_fill");
-            if (roiThicknessObj != nullptr && cJSON_IsBool(roiFillObj)) {
-                roiFill = roiFillObj->valueint;
-                LOG(INFO) << "Found roi_fill=" << cJSON_Print(roiFillObj);
+    cJSON *confObj = cJSON_Parse(confStr);
+    if (confObj == nullptr) {
+        LOG(ERROR) << "Failed parsing `" << confStr << "`";
+        return false;
+    }
+    cJSON *gpuObj = cJSON_GetObjectItem(confObj, "gpu_id");
+    if (gpuObj != nullptr && gpuObj->type == cJSON_Number) {
+        gpuID = gpuObj->valueint;
+        LOG(INFO) << "Found gpu_id=" << cJSON_Print(gpuObj);
+    }
+    cJSON *drawROIObj = cJSON_GetObjectItem(confObj, "draw_roi_area");
+    if (drawROIObj != nullptr && cJSON_IsBool(drawROIObj)) {
+        drawROIArea = drawROIObj->valueint;
+        LOG(INFO) << "Found draw_roi_area=" << cJSON_Print(drawROIObj);
+    }
+    if (drawROIArea) {
+        cJSON *roiColorRootObj = cJSON_GetObjectItem(confObj, "roi_color");
+        if (roiColorRootObj != nullptr && roiColorRootObj->type == cJSON_Object) {
+            LOG(INFO) << "Found roi_color=" << cJSON_Print(roiColorRootObj);
+            cJSON *roiColorValueObj = cJSON_GetObjectItem(roiColorRootObj, "value");
+            if (roiColorValueObj != nullptr && roiColorValueObj->type == cJSON_Array) {
+                getBGRAColor(roiColor, roiColorValueObj);
             }
         }
-        cJSON *drawResultObj = cJSON_GetObjectItem(confObj, "draw_result");
-        if (drawResultObj != nullptr && cJSON_IsBool(drawResultObj)) {
-            drawResult = drawResultObj->valueint;
-            LOG(INFO) << "Found draw_result=" << cJSON_Print(drawResultObj);
+        cJSON *roiThicknessObj = cJSON_GetObjectItem(confObj, "roi_line_thickness");
+        if (roiThicknessObj != nullptr && roiThicknessObj->type == cJSON_Number) {
+            roiLineThickness = roiThicknessObj->valueint;
+            LOG(INFO) << "Found roi_line_thickness=" << cJSON_Print(roiThicknessObj);
         }
-        cJSON *drawConfObj = cJSON_GetObjectItem(confObj, "draw_confidence");
-        if (drawConfObj != nullptr && cJSON_IsBool(drawConfObj)) {
-            drawConfidence = drawConfObj->valueint;
-            LOG(INFO) << "Found draw_confidence=" << cJSON_Print(drawConfObj);
-        }
-        cJSON *threshObj = cJSON_GetObjectItem(confObj, "thresh");
-        if (threshObj != nullptr && threshObj->type == cJSON_Number) {
-            thresh = threshObj->valuedouble;
-            LOG(INFO) << "Found thresh=" << thresh;
-        }
-        cJSON *textFgColorRootObj = cJSON_GetObjectItem(confObj, "object_text_color");
-        if (textFgColorRootObj != nullptr && textFgColorRootObj->type == cJSON_Object) {
-            LOG(INFO) << "Found object_text_color=" << cJSON_Print(textFgColorRootObj);
-            cJSON *textFgColorValueObj = cJSON_GetObjectItem(textFgColorRootObj, "value");
-            if (textFgColorValueObj != nullptr && textFgColorValueObj->type == cJSON_Array) {
-                getRGBAColor(textFgColor, textFgColorValueObj);
-            }
-        }
-        cJSON *textBgColorRootObj = cJSON_GetObjectItem(confObj, "object_text_bg_color");
-        if (textBgColorRootObj != nullptr && textBgColorRootObj->type == cJSON_Object) {
-            LOG(INFO) << "Found object_text_bg_color=" << cJSON_Print(textBgColorRootObj);
-            cJSON *textBgColorValueObj = cJSON_GetObjectItem(textBgColorRootObj, "value");
-            if (textBgColorValueObj != nullptr && textBgColorValueObj->type == cJSON_Array) {
-                getRGBAColor(textBgColor, textBgColorValueObj);
-            }
-        }
-        cJSON *objectRectLineThicknessObj = cJSON_GetObjectItem(confObj, "object_rect_line_thickness");
-        if (objectRectLineThicknessObj != nullptr && objectRectLineThicknessObj->type == cJSON_Number) {
-            objectRectLineThickness = objectRectLineThicknessObj->valueint;
-            LOG(INFO) << "Found object_rect_line_thickness=" << cJSON_Print(objectRectLineThicknessObj);
-        }
-        cJSON *dogRectColorObj = cJSON_GetObjectItem(confObj, "dog_rect_color");
-        if (dogRectColorObj != nullptr && dogRectColorObj->type == cJSON_Object) {
-            LOG(INFO) << "Found dog_rect_color=" << cJSON_Print(dogRectColorObj);
-            getRGBAColor(dogRectColor, cJSON_GetObjectItem(dogRectColorObj, "value"));
+        cJSON *roiFillObj = cJSON_GetObjectItem(confObj, "roi_fill");
+        if (roiThicknessObj != nullptr && cJSON_IsBool(roiFillObj)) {
+            roiFill = roiFillObj->valueint;
+            LOG(INFO) << "Found roi_fill=" << cJSON_Print(roiFillObj);
         }
 
-        cJSON_Delete(confObj);
+        cJSON *roiArrObj = cJSON_GetObjectItem(confObj, "roi");
+        if (roiArrObj != nullptr && roiArrObj->type == cJSON_Array && cJSON_GetArraySize(roiArrObj) > 0) {
+            std::vector<std::string> roiStrs;
+            for (int i = 0; i < cJSON_GetArraySize(roiArrObj); ++i) {
+                cJSON *roiObj = cJSON_GetArrayItem(roiArrObj, i);
+                if (roiObj == nullptr || roiObj->type != cJSON_String) {
+                    continue;
+                }
+                roiStrs.emplace_back(std::string(roiObj->valuestring));
+            }
+            if (!roiStrs.empty()) {
+                origROIArgs = roiStrs;
+                onInFrameSizeChanged(currentInFrameSize.width, currentInFrameSize.height);
+            }
+        }
+    }
+    cJSON *drawResultObj = cJSON_GetObjectItem(confObj, "draw_result");
+    if (drawResultObj != nullptr && cJSON_IsBool(drawResultObj)) {
+        drawResult = drawResultObj->valueint;
+        LOG(INFO) << "Found draw_result=" << cJSON_Print(drawResultObj);
+    }
+    cJSON *drawConfObj = cJSON_GetObjectItem(confObj, "draw_confidence");
+    if (drawConfObj != nullptr && cJSON_IsBool(drawConfObj)) {
+        drawConfidence = drawConfObj->valueint;
+        LOG(INFO) << "Found draw_confidence=" << cJSON_Print(drawConfObj);
+    }
+    cJSON *threshObj = cJSON_GetObjectItem(confObj, "thresh");
+    if (threshObj != nullptr && threshObj->type == cJSON_Number) {
+        thresh = threshObj->valuedouble;
+        LOG(INFO) << "Found thresh=" << thresh;
+    }
+    cJSON *markTextObj = cJSON_GetObjectItem(confObj, "mark_text");
+    if (markTextObj != nullptr && markTextObj->type == cJSON_String) {
+        LOG(INFO) << "Found mark_text=" << cJSON_Print(markTextObj);
+        dogRectText = markTextObj->valuestring;
+    }
+    cJSON *textFgColorRootObj = cJSON_GetObjectItem(confObj, "object_text_color");
+    if (textFgColorRootObj != nullptr && textFgColorRootObj->type == cJSON_Object) {
+        LOG(INFO) << "Found object_text_color=" << cJSON_Print(textFgColorRootObj);
+        cJSON *textFgColorValueObj = cJSON_GetObjectItem(textFgColorRootObj, "value");
+        if (textFgColorValueObj != nullptr && textFgColorValueObj->type == cJSON_Array) {
+            getBGRAColor(textFgColor, textFgColorValueObj);
+        }
+    }
+    cJSON *textBgColorRootObj = cJSON_GetObjectItem(confObj, "object_text_bg_color");
+    if (textBgColorRootObj != nullptr && textBgColorRootObj->type == cJSON_Object) {
+        LOG(INFO) << "Found object_text_bg_color=" << cJSON_Print(textBgColorRootObj);
+        cJSON *textBgColorValueObj = cJSON_GetObjectItem(textBgColorRootObj, "value");
+        if (textBgColorValueObj != nullptr && textBgColorValueObj->type == cJSON_Array) {
+            getBGRAColor(textBgColor, textBgColorValueObj);
+        }
+    }
+    cJSON *objectRectLineThicknessObj = cJSON_GetObjectItem(confObj, "object_rect_line_thickness");
+    if (objectRectLineThicknessObj != nullptr && objectRectLineThicknessObj->type == cJSON_Number) {
+        dogRectLineThickness = objectRectLineThicknessObj->valueint;
+        LOG(INFO) << "Found object_rect_line_thickness=" << cJSON_Print(objectRectLineThicknessObj);
+    }
+    cJSON *markRectColorObj = cJSON_GetObjectItem(confObj, "dog_rect_color");
+    if (markRectColorObj != nullptr && markRectColorObj->type == cJSON_Object) {
+        LOG(INFO) << "Found dog_rect_color=" << cJSON_Print(markRectColorObj);
+        getBGRAColor(dogRectColor, cJSON_GetObjectItem(markRectColorObj, "value"));
+    }
+
+    cJSON *markTextSizeObj = cJSON_GetObjectItem(confObj, "object_text_size");
+    if (markTextSizeObj != nullptr && markTextSizeObj->type == cJSON_Number) {
+        LOG(INFO) << "Found object_text_size=" << cJSON_Print(markTextSizeObj);
+        dogTextHeight = markTextSizeObj->valueint;
+    }
+
+    cJSON *warningTextSizeObj = cJSON_GetObjectItem(confObj, "warning_text_size");
+    if (warningTextSizeObj != nullptr && warningTextSizeObj->type == cJSON_Number) {
+        LOG(INFO) << "Found warning_text_size=" << cJSON_Print(warningTextSizeObj);
+        warningTextSize = markTextSizeObj->valueint;
+    }
+
+    cJSON *warningTextObj = cJSON_GetObjectItem(confObj, "warning_text");
+    if (warningTextObj != nullptr && warningTextObj->type == cJSON_String) {
+        LOG(INFO) << "Found warning_text=" << cJSON_Print(warningTextObj);
+        warningText = warningTextObj->valuestring;
+    }
+    cJSON *warningTextFgObj = cJSON_GetObjectItem(confObj, "warning_text_color");
+    if (warningTextFgObj != nullptr && warningTextFgObj->type == cJSON_Object) {
+        LOG(INFO) << "Found warning_text_color=" << cJSON_Print(warningTextFgObj);
+        getBGRAColor(warningTextFg, cJSON_GetObjectItem(warningTextFgObj, "value"));
+    }
+    cJSON *warningTextBgObj = cJSON_GetObjectItem(confObj, "warning_text_bg_color");
+    if (warningTextBgObj != nullptr && warningTextBgObj->type == cJSON_Object) {
+        LOG(INFO) << "Found warning_text_bg_color=" << cJSON_Print(warningTextBgObj);
+        getBGRAColor(warningTextBg, cJSON_GetObjectItem(warningTextBgObj, "value"));
+    }
+
+    cJSON_Delete(confObj);
     return true;
 }
 
@@ -195,55 +309,46 @@ int processMat(SampleDetector *detector, const cv::Mat &inFrame, const char* arg
         }
     }
 
-     /** 解析args传入的参数，args使用json格式的字符串传入，开发者需要根据实际需求解析参数，此处示例，args内部只有一个roi参数
-      * 输入的args样例：
-      * {"roi": ["POLYGON((0.21666666666666667 0.255,0.6924242424242424 0.1375,0.8833333333333333 0.72,0.4106060606060606 0.965,0.048484848484848485 0.82,0.2196969696969697 0.2575))"]
-      *  "show_result": true
-      * }
-      **/
-    std::vector<VectorPoint> polygons;
-    if (args != nullptr && strlen(args) > 0) {
-        LOG(INFO) << "input args:" << args;
-        cJSON *argsObj = cJSON_Parse(args);
-        do {
-            if (argsObj == nullptr) {
-                LOG(ERROR) << "Cannot parse args!";
-                break;
-            }
-            cJSON *roiArrObj = cJSON_GetObjectItem(argsObj, "roi");
-            if (roiArrObj == nullptr) {
-                LOG(INFO) << "roi param not found!";
-                break;
-            }
-            WKTParser wktParser(cv::Size(inFrame.cols, inFrame.rows));
-
-            for (int i = 0; i < cJSON_GetArraySize(roiArrObj); ++i) {
-                cJSON *roiObj = cJSON_GetArrayItem(roiArrObj, i);
-                if (roiObj == nullptr || roiObj->type != cJSON_String) {
-                    continue;
-                }
-                VectorPoint polygonPoints;
-                wktParser.parsePolygon(roiObj->valuestring, &polygonPoints);
-                polygons.emplace_back(polygonPoints);
-            }
-        } while (false);
-        if (argsObj != nullptr) {
-            cJSON_Delete(argsObj);
-        }
+    if (currentInFrameSize.width != inFrame.cols || currentInFrameSize.height != inFrame.rows) {
+        onInFrameSizeChanged(inFrame.cols, inFrame.rows);
     }
 
     /**
-     * 解析其他参数并更新，根据接口规范标准，接口必须支持配置文件/usr/local/ev_sdk/model/algo_config.json内参数的实时更新功能
+     * 解析参数并更新，根据接口规范标准，接口必须支持配置文件/usr/local/ev_sdk/model/algo_config.json内参数的实时更新功能
      * （即通过ji_calc_*等接口传入）
      */
     parseAndUpdateArgs(args);
     detector->setThresh(thresh);
 
+    // 针对每个ROI进行算法处理
+    std::vector<SampleDetector::Object> detectedObjects;
+    std::vector<cv::Rect> detectedTargets;
+
     // 算法处理
-    std::vector<SampleDetector::Object> detectResult;
-    int processRet = detector->processImage(inFrame, detectResult);
-    if (processRet != SampleDetector::PROCESS_OK) {
-        return JISDK_RET_FAILED;
+    for (auto &roiRect : currentROIRects) {
+        LOG(WARNING) << "current roi:" << roiRect;
+        // Fix darknet save_image bug, image width and height should be divisible by 10
+        if (roiRect.width % 2 != 0) {
+            roiRect.width -= 1;
+        }
+        if (roiRect.height % 2 != 0) {
+            roiRect.height -= 1;
+        }
+
+        cv::Mat cropedMatRef = inFrame(roiRect);
+        cv::Mat cropedMat;
+        cropedMatRef.copyTo(cropedMat);
+
+        std::vector<SampleDetector::Object> objects;
+        int processRet = detector->processImage(cropedMat, objects);
+        if (processRet != SampleDetector::PROCESS_OK) {
+            return JISDK_RET_FAILED;
+        }
+        for (auto &object : objects) {
+            object.rect.x += roiRect.x;
+            object.rect.y += roiRect.y;
+            detectedObjects.emplace_back(object);
+        }
     }
 
     // 此处示例业务逻辑：当算法到有`dog`时，就报警
@@ -253,22 +358,27 @@ int processMat(SampleDetector *detector, const cv::Mat &inFrame, const char* arg
     // 创建输出图
     inFrame.copyTo(outFrame);
     // 画ROI区域
-    if (drawROIArea && !polygons.empty()) {
-        drawPolygon(outFrame, polygons, cv::Scalar(roiColor[0], roiColor[1], roiColor[2]), roiColor[3], cv::LINE_AA, roiLineThickness, roiFill);
+    if (drawROIArea && !currentROIOrigPolygons.empty()) {
+        for (auto &roi : currentROIOrigPolygons) {
+            for (auto &p : roi) {
+                LOG(INFO) << "roi point:" << p;
+            }
+        }
+        drawPolygon(outFrame, currentROIOrigPolygons, cv::Scalar(roiColor[0], roiColor[1], roiColor[2]), roiColor[3], cv::LINE_AA, roiLineThickness, roiFill);
     }
     // 判断是否要要报警并将检测到的目标画到输出图上
-    for (auto &object : detectResult) {
+    for (auto &object : detectedObjects) {
         // 如果检测到有`狗`就报警
         if (strcmp(object.name.c_str(), "dog") == 0) {
             LOG(INFO) << "Found " << object.name;
             if (drawResult) {
                 std::stringstream ss;
-                ss << object.name;
+                ss << dogRectText;
                 if (drawConfidence) {
                     ss.precision(2);
                     ss << std::fixed << ": " << object.prob * 100 << "%";
                 }
-                drawRectAndText(outFrame, object.rect, ss.str(), objectRectLineThickness, cv::LINE_AA,
+                drawRectAndText(outFrame, object.rect, ss.str(), dogRectLineThickness, cv::LINE_AA,
                         cv::Scalar(dogRectColor[0], dogRectColor[1], dogRectColor[2]), dogRectColor[3], 30,
                         cv::Scalar(textFgColor[0], textFgColor[1], textFgColor[2]),
                         cv::Scalar(textBgColor[0], textBgColor[1], textBgColor[2]));
@@ -286,22 +396,22 @@ int processMat(SampleDetector *detector, const cv::Mat &inFrame, const char* arg
         jsonAlertCode = JSON_ALERT_FLAG_TRUE;
     }
     cJSON_AddItemToObject(rootObj, JSON_ALERT_FLAG_KEY, cJSON_CreateNumber(jsonAlertCode));
-    cJSON *personsObj = cJSON_CreateArray();
+    cJSON *dogsObj = cJSON_CreateArray();
     for (auto &dog : dogs) {
-        cJSON *personObj = cJSON_CreateObject();
+        cJSON *odbObj = cJSON_CreateObject();
         int xmin = dog.rect.x;
         int ymin = dog.rect.y;
         int xmax = xmin + dog.rect.width;
         int ymax = ymin + dog.rect.height;
-        cJSON_AddItemToObject(personObj, "xmin", cJSON_CreateNumber(xmin));
-        cJSON_AddItemToObject(personObj, "ymin", cJSON_CreateNumber(ymin));
-        cJSON_AddItemToObject(personObj, "xmax", cJSON_CreateNumber(xmax));
-        cJSON_AddItemToObject(personObj, "ymax", cJSON_CreateNumber(ymax));
-        cJSON_AddItemToObject(personObj, "confidence", cJSON_CreateNumber(dog.prob));
+        cJSON_AddItemToObject(odbObj, "xmin", cJSON_CreateNumber(xmin));
+        cJSON_AddItemToObject(odbObj, "ymin", cJSON_CreateNumber(ymin));
+        cJSON_AddItemToObject(odbObj, "xmax", cJSON_CreateNumber(xmax));
+        cJSON_AddItemToObject(odbObj, "ymax", cJSON_CreateNumber(ymax));
+        cJSON_AddItemToObject(odbObj, "confidence", cJSON_CreateNumber(dog.prob));
 
-        cJSON_AddItemToArray(personsObj, personObj);
+        cJSON_AddItemToArray(dogsObj, odbObj);
     }
-    cJSON_AddItemToObject(rootObj, "dogs", personsObj);
+    cJSON_AddItemToObject(rootObj, "dogs", dogsObj);
 
     char *jsonResultStr = cJSON_Print(rootObj);
     int jsonSize = strlen(jsonResultStr);

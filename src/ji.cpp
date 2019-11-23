@@ -63,6 +63,7 @@ int warningTextSize = 40;   // 画到图上的报警文字大小
 std::string warningText("WARNING!");    // 画到图上的报警文字
 COLOR_BGRA_TYPE warningTextFg = {255, 255, 255, 0}; // 报警文字颜色
 COLOR_BGRA_TYPE warningTextBg = {0, 0, 255, 0}; // 报警文字背景颜色
+cv::Point warningTextLeftTop(0, 0); // 报警文字左上角位置
 
 std::vector<cv::Rect> currentROIRects; // 矩形roi区域
 std::vector<VectorPoint> currentROIOrigPolygons;    // Original roi polygons
@@ -165,12 +166,9 @@ bool parseAndUpdateArgs(const char *confStr) {
     }
     if (drawROIArea) {
         cJSON *roiColorRootObj = cJSON_GetObjectItem(confObj, "roi_color");
-        if (roiColorRootObj != nullptr && roiColorRootObj->type == cJSON_Object) {
+        if (roiColorRootObj != nullptr && roiColorRootObj->type == cJSON_Array) {
             LOG(INFO) << "Found roi_color=" << cJSON_Print(roiColorRootObj);
-            cJSON *roiColorValueObj = cJSON_GetObjectItem(roiColorRootObj, "value");
-            if (roiColorValueObj != nullptr && roiColorValueObj->type == cJSON_Array) {
-                getBGRAColor(roiColor, roiColorValueObj);
-            }
+            getBGRAColor(roiColor, roiColorRootObj);
         }
         cJSON *roiThicknessObj = cJSON_GetObjectItem(confObj, "roi_line_thickness");
         if (roiThicknessObj != nullptr && roiThicknessObj->type == cJSON_Number) {
@@ -220,20 +218,14 @@ bool parseAndUpdateArgs(const char *confStr) {
         dogRectText = markTextObj->valuestring;
     }
     cJSON *textFgColorRootObj = cJSON_GetObjectItem(confObj, "object_text_color");
-    if (textFgColorRootObj != nullptr && textFgColorRootObj->type == cJSON_Object) {
+    if (textFgColorRootObj != nullptr && textFgColorRootObj->type == cJSON_Array) {
         LOG(INFO) << "Found object_text_color=" << cJSON_Print(textFgColorRootObj);
-        cJSON *textFgColorValueObj = cJSON_GetObjectItem(textFgColorRootObj, "value");
-        if (textFgColorValueObj != nullptr && textFgColorValueObj->type == cJSON_Array) {
-            getBGRAColor(textFgColor, textFgColorValueObj);
-        }
+        getBGRAColor(textFgColor, textFgColorRootObj);
     }
     cJSON *textBgColorRootObj = cJSON_GetObjectItem(confObj, "object_text_bg_color");
-    if (textBgColorRootObj != nullptr && textBgColorRootObj->type == cJSON_Object) {
+    if (textBgColorRootObj != nullptr && textBgColorRootObj->type == cJSON_Array) {
         LOG(INFO) << "Found object_text_bg_color=" << cJSON_Print(textBgColorRootObj);
-        cJSON *textBgColorValueObj = cJSON_GetObjectItem(textBgColorRootObj, "value");
-        if (textBgColorValueObj != nullptr && textBgColorValueObj->type == cJSON_Array) {
-            getBGRAColor(textBgColor, textBgColorValueObj);
-        }
+        getBGRAColor(textBgColor, textBgColorRootObj);
     }
     cJSON *objectRectLineThicknessObj = cJSON_GetObjectItem(confObj, "object_rect_line_thickness");
     if (objectRectLineThicknessObj != nullptr && objectRectLineThicknessObj->type == cJSON_Number) {
@@ -241,9 +233,9 @@ bool parseAndUpdateArgs(const char *confStr) {
         LOG(INFO) << "Found object_rect_line_thickness=" << cJSON_Print(objectRectLineThicknessObj);
     }
     cJSON *markRectColorObj = cJSON_GetObjectItem(confObj, "dog_rect_color");
-    if (markRectColorObj != nullptr && markRectColorObj->type == cJSON_Object) {
+    if (markRectColorObj != nullptr && markRectColorObj->type == cJSON_Array) {
         LOG(INFO) << "Found dog_rect_color=" << cJSON_Print(markRectColorObj);
-        getBGRAColor(dogRectColor, cJSON_GetObjectItem(markRectColorObj, "value"));
+        getBGRAColor(dogRectColor, markRectColorObj);
     }
 
     cJSON *markTextSizeObj = cJSON_GetObjectItem(confObj, "object_text_size");
@@ -255,7 +247,7 @@ bool parseAndUpdateArgs(const char *confStr) {
     cJSON *warningTextSizeObj = cJSON_GetObjectItem(confObj, "warning_text_size");
     if (warningTextSizeObj != nullptr && warningTextSizeObj->type == cJSON_Number) {
         LOG(INFO) << "Found warning_text_size=" << cJSON_Print(warningTextSizeObj);
-        warningTextSize = markTextSizeObj->valueint;
+        warningTextSize = warningTextSizeObj->valueint;
     }
 
     cJSON *warningTextObj = cJSON_GetObjectItem(confObj, "warning_text");
@@ -264,14 +256,28 @@ bool parseAndUpdateArgs(const char *confStr) {
         warningText = warningTextObj->valuestring;
     }
     cJSON *warningTextFgObj = cJSON_GetObjectItem(confObj, "warning_text_color");
-    if (warningTextFgObj != nullptr && warningTextFgObj->type == cJSON_Object) {
+    if (warningTextFgObj != nullptr && warningTextFgObj->type == cJSON_Array) {
         LOG(INFO) << "Found warning_text_color=" << cJSON_Print(warningTextFgObj);
-        getBGRAColor(warningTextFg, cJSON_GetObjectItem(warningTextFgObj, "value"));
+        getBGRAColor(warningTextFg, warningTextFgObj);
     }
     cJSON *warningTextBgObj = cJSON_GetObjectItem(confObj, "warning_text_bg_color");
-    if (warningTextBgObj != nullptr && warningTextBgObj->type == cJSON_Object) {
+    if (warningTextBgObj != nullptr && warningTextBgObj->type == cJSON_Array) {
         LOG(INFO) << "Found warning_text_bg_color=" << cJSON_Print(warningTextBgObj);
-        getBGRAColor(warningTextBg, cJSON_GetObjectItem(warningTextBgObj, "value"));
+        getBGRAColor(warningTextBg, warningTextBgObj);
+    }
+
+    cJSON *warningTextLefTopObj = cJSON_GetObjectItem(confObj, "warning_text_left_top");
+    if (warningTextLefTopObj != nullptr && warningTextLefTopObj->type == cJSON_Array) {
+        cJSON *leftObj = cJSON_GetArrayItem(warningTextLefTopObj, 0);
+        cJSON *topObj = cJSON_GetArrayItem(warningTextLefTopObj, 0);
+        if (leftObj != nullptr && leftObj->type == cJSON_Number) {
+            warningTextLeftTop.x = leftObj->valueint;
+        }
+        if (topObj != nullptr && topObj->type == cJSON_Number) {
+            warningTextLeftTop.y = topObj->valueint;
+        }
+
+        LOG(INFO) << "Found warning_text_left_top:" << warningTextLeftTop;
     }
 
     cJSON_Delete(confObj);
@@ -379,7 +385,7 @@ int processMat(SampleDetector *detector, const cv::Mat &inFrame, const char* arg
                     ss << std::fixed << ": " << object.prob * 100 << "%";
                 }
                 drawRectAndText(outFrame, object.rect, ss.str(), dogRectLineThickness, cv::LINE_AA,
-                        cv::Scalar(dogRectColor[0], dogRectColor[1], dogRectColor[2]), dogRectColor[3], 30,
+                        cv::Scalar(dogRectColor[0], dogRectColor[1], dogRectColor[2]), dogRectColor[3], dogTextHeight,
                         cv::Scalar(textFgColor[0], textFgColor[1], textFgColor[2]),
                         cv::Scalar(textBgColor[0], textBgColor[1], textBgColor[2]));
             }
@@ -387,6 +393,12 @@ int processMat(SampleDetector *detector, const cv::Mat &inFrame, const char* arg
             isNeedAlert = true;
             dogs.push_back(object);
         }
+    }
+
+    if (isNeedAlert) {
+        drawText(outFrame, warningText, warningTextSize,
+                 cv::Scalar(warningTextFg[0], warningTextFg[1], warningTextFg[2]),
+                 cv::Scalar(warningTextBg[0], warningTextBg[1], warningTextBg[2]), warningTextLeftTop);
     }
 
     // 将结果封装成json字符串

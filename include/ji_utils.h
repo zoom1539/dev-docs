@@ -47,4 +47,18 @@ void
 drawPolygon(cv::Mat &img, std::vector<std::vector<cv::Point> > polygons, const cv::Scalar &color, float alpha, int lineType,
             int thickness = 3, bool isFill = false);
 
+/**
+ * 在img上画文字text
+ *
+ * @param img   输入图
+ * @param text  文字
+ * @param fontHeight    文字大小
+ * @param fgColor   文字颜色，BGR格式
+ * @param bgColor   文字背景颜色，BGR格式
+ * @param leftTop   所画文字的左上顶点所在位置
+ */
+void
+drawText(cv::Mat &img, const std::string &text, int fontHeight, const cv::Scalar &fgColor, const cv::Scalar &bgColor,
+         const cv::Point &leftTopShift);
+
 #endif  // JI_UTILS

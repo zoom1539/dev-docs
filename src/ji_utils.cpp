@@ -65,3 +65,26 @@ void drawPolygon(cv::Mat &img, std::vector<std::vector<cv::Point> > polygons, co
     }
 }
 
+void drawText(cv::Mat &img, const std::string &text, int fontHeight, const cv::Scalar &fgColor,
+        const cv::Scalar &bgColor, const cv::Point &leftTopShift) {
+    if (text.empty()) {
+        printf("text cannot be empty!\n");
+        return;
+    }
+
+    cv::Ptr<cv::freetype::FreeType2> ft2;
+    int baseline = 0;
+    ft2 = cv::freetype::createFreeType2();
+    ft2->loadFontData("/usr/local/ev_sdk/lib/fonts/DejaVuSans.ttf", 0);
+    cv::Size textSize = ft2->getTextSize(text, fontHeight, -1, &baseline);
+    cv::Point textLeftBottom(0, textSize.height);
+    textLeftBottom -= cv::Point(0, baseline);   // (left, bottom) of text
+    cv::Point textLeftTop(textLeftBottom.x, textLeftBottom.y - textSize.height);    // (left, top) of text
+    // Draw text background
+    textLeftTop += leftTopShift;
+    cv::rectangle(img, textLeftTop, textLeftTop + cv::Point(textSize.width, textSize.height + baseline), bgColor,
+                  cv::FILLED);
+    textLeftBottom += leftTopShift;
+    ft2->putText(img, text, textLeftBottom, fontHeight, fgColor, -1, cv::LINE_AA, true);
+}
+

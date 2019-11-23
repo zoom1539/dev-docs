@@ -157,28 +157,23 @@ bool parseAndUpdateArgs(const char *confStr) {
     cJSON *gpuObj = cJSON_GetObjectItem(confObj, "gpu_id");
     if (gpuObj != nullptr && gpuObj->type == cJSON_Number) {
         gpuID = gpuObj->valueint;
-        LOG(INFO) << "Found gpu_id=" << cJSON_Print(gpuObj);
     }
     cJSON *drawROIObj = cJSON_GetObjectItem(confObj, "draw_roi_area");
     if (drawROIObj != nullptr && cJSON_IsBool(drawROIObj)) {
         drawROIArea = drawROIObj->valueint;
-        LOG(INFO) << "Found draw_roi_area=" << cJSON_Print(drawROIObj);
     }
     if (drawROIArea) {
         cJSON *roiColorRootObj = cJSON_GetObjectItem(confObj, "roi_color");
         if (roiColorRootObj != nullptr && roiColorRootObj->type == cJSON_Array) {
-            LOG(INFO) << "Found roi_color=" << cJSON_Print(roiColorRootObj);
             getBGRAColor(roiColor, roiColorRootObj);
         }
         cJSON *roiThicknessObj = cJSON_GetObjectItem(confObj, "roi_line_thickness");
         if (roiThicknessObj != nullptr && roiThicknessObj->type == cJSON_Number) {
             roiLineThickness = roiThicknessObj->valueint;
-            LOG(INFO) << "Found roi_line_thickness=" << cJSON_Print(roiThicknessObj);
         }
         cJSON *roiFillObj = cJSON_GetObjectItem(confObj, "roi_fill");
         if (roiThicknessObj != nullptr && cJSON_IsBool(roiFillObj)) {
             roiFill = roiFillObj->valueint;
-            LOG(INFO) << "Found roi_fill=" << cJSON_Print(roiFillObj);
         }
 
         cJSON *roiArrObj = cJSON_GetObjectItem(confObj, "roi");
@@ -200,69 +195,56 @@ bool parseAndUpdateArgs(const char *confStr) {
     cJSON *drawResultObj = cJSON_GetObjectItem(confObj, "draw_result");
     if (drawResultObj != nullptr && cJSON_IsBool(drawResultObj)) {
         drawResult = drawResultObj->valueint;
-        LOG(INFO) << "Found draw_result=" << cJSON_Print(drawResultObj);
     }
     cJSON *drawConfObj = cJSON_GetObjectItem(confObj, "draw_confidence");
     if (drawConfObj != nullptr && cJSON_IsBool(drawConfObj)) {
         drawConfidence = drawConfObj->valueint;
-        LOG(INFO) << "Found draw_confidence=" << cJSON_Print(drawConfObj);
     }
     cJSON *threshObj = cJSON_GetObjectItem(confObj, "thresh");
     if (threshObj != nullptr && threshObj->type == cJSON_Number) {
         thresh = threshObj->valuedouble;
-        LOG(INFO) << "Found thresh=" << thresh;
     }
     cJSON *markTextObj = cJSON_GetObjectItem(confObj, "mark_text");
     if (markTextObj != nullptr && markTextObj->type == cJSON_String) {
-        LOG(INFO) << "Found mark_text=" << cJSON_Print(markTextObj);
         dogRectText = markTextObj->valuestring;
     }
     cJSON *textFgColorRootObj = cJSON_GetObjectItem(confObj, "object_text_color");
     if (textFgColorRootObj != nullptr && textFgColorRootObj->type == cJSON_Array) {
-        LOG(INFO) << "Found object_text_color=" << cJSON_Print(textFgColorRootObj);
         getBGRAColor(textFgColor, textFgColorRootObj);
     }
     cJSON *textBgColorRootObj = cJSON_GetObjectItem(confObj, "object_text_bg_color");
     if (textBgColorRootObj != nullptr && textBgColorRootObj->type == cJSON_Array) {
-        LOG(INFO) << "Found object_text_bg_color=" << cJSON_Print(textBgColorRootObj);
         getBGRAColor(textBgColor, textBgColorRootObj);
     }
     cJSON *objectRectLineThicknessObj = cJSON_GetObjectItem(confObj, "object_rect_line_thickness");
     if (objectRectLineThicknessObj != nullptr && objectRectLineThicknessObj->type == cJSON_Number) {
         dogRectLineThickness = objectRectLineThicknessObj->valueint;
-        LOG(INFO) << "Found object_rect_line_thickness=" << cJSON_Print(objectRectLineThicknessObj);
     }
     cJSON *markRectColorObj = cJSON_GetObjectItem(confObj, "dog_rect_color");
     if (markRectColorObj != nullptr && markRectColorObj->type == cJSON_Array) {
-        LOG(INFO) << "Found dog_rect_color=" << cJSON_Print(markRectColorObj);
         getBGRAColor(dogRectColor, markRectColorObj);
     }
 
     cJSON *markTextSizeObj = cJSON_GetObjectItem(confObj, "object_text_size");
     if (markTextSizeObj != nullptr && markTextSizeObj->type == cJSON_Number) {
-        LOG(INFO) << "Found object_text_size=" << cJSON_Print(markTextSizeObj);
         dogTextHeight = markTextSizeObj->valueint;
     }
 
     cJSON *warningTextSizeObj = cJSON_GetObjectItem(confObj, "warning_text_size");
     if (warningTextSizeObj != nullptr && warningTextSizeObj->type == cJSON_Number) {
-        LOG(INFO) << "Found warning_text_size=" << cJSON_Print(warningTextSizeObj);
         warningTextSize = warningTextSizeObj->valueint;
     }
 
     cJSON *warningTextObj = cJSON_GetObjectItem(confObj, "warning_text");
     if (warningTextObj != nullptr && warningTextObj->type == cJSON_String) {
-        LOG(INFO) << "Found warning_text=" << cJSON_Print(warningTextObj);
         warningText = warningTextObj->valuestring;
     }
     cJSON *warningTextFgObj = cJSON_GetObjectItem(confObj, "warning_text_color");
     if (warningTextFgObj != nullptr && warningTextFgObj->type == cJSON_Array) {
-        LOG(INFO) << "Found warning_text_color=" << cJSON_Print(warningTextFgObj);
         getBGRAColor(warningTextFg, warningTextFgObj);
     }
     cJSON *warningTextBgObj = cJSON_GetObjectItem(confObj, "warning_text_bg_color");
     if (warningTextBgObj != nullptr && warningTextBgObj->type == cJSON_Array) {
-        LOG(INFO) << "Found warning_text_bg_color=" << cJSON_Print(warningTextBgObj);
         getBGRAColor(warningTextBg, warningTextBgObj);
     }
 
@@ -276,8 +258,6 @@ bool parseAndUpdateArgs(const char *confStr) {
         if (topObj != nullptr && topObj->type == cJSON_Number) {
             warningTextLeftTop.y = topObj->valueint;
         }
-
-        LOG(INFO) << "Found warning_text_left_top:" << warningTextLeftTop;
     }
 
     cJSON_Delete(confObj);

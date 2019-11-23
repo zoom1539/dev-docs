@@ -345,11 +345,6 @@ int processMat(SampleDetector *detector, const cv::Mat &inFrame, const char* arg
     inFrame.copyTo(outFrame);
     // 画ROI区域
     if (drawROIArea && !currentROIOrigPolygons.empty()) {
-        for (auto &roi : currentROIOrigPolygons) {
-            for (auto &p : roi) {
-                LOG(INFO) << "roi point:" << p;
-            }
-        }
         drawPolygon(outFrame, currentROIOrigPolygons, cv::Scalar(roiColor[0], roiColor[1], roiColor[2]), roiColor[3], cv::LINE_AA, roiLineThickness, roiFill);
     }
     // 判断是否要要报警并将检测到的目标画到输出图上
@@ -458,7 +453,7 @@ int ji_init(int argc, char **argv) {
     }
 
     // 从统一的配置文件读取配置参数，SDK实现必须支持从这个统一的配置文件中读取算法&业务逻辑相关的配置参数
-    const char *configFile = "/usr/local/ev_sdk/model/algo_config.json";
+    const char *configFile = "/usr/local/ev_sdk/config/algo_config.json";
     LOG(INFO) << "Parsing configuration file: " << configFile;
 
     std::ifstream confIfs(configFile);
@@ -524,9 +519,9 @@ void *ji_create_predictor(int pdtype) {
     decryptedModelStr[len] = '\0';
 #endif
 
-    int iRet = detector->init("/usr/local/ev_sdk/model/config/coco.names",
+    int iRet = detector->init("/usr/local/ev_sdk/config/coco.names",
             decryptedModelStr,
-            "/usr/local/ev_sdk/model/model.data");
+            "/usr/local/ev_sdk/model/model.dat");
     if (decryptedModelStr != nullptr) {
         free(decryptedModelStr);
     }

@@ -283,7 +283,7 @@ make install
 
 4. 算法配置选项要求
 
-   - `EV_SDK`的实现需要使用标准[JSON](https://www.json.cn/wiki.html)格式的配置文件，所有算法与`SDK`可配置参数**必须**存放在统一的配置文件：`/usr/local/ev_sdk/model/algo_config.json`中；
+   - `EV_SDK`的实现需要使用标准[JSON](https://www.json.cn/wiki.html)格式的配置文件，所有算法与`SDK`可配置参数**必须**存放在统一的配置文件：`/usr/local/ev_sdk/config/algo_config.json`中；
    - 配置文件中必须实现的参数项：
      - `gpu_id`：整型，`-1`表示不使用GPU，大于`0`表示表示算法使用的GPU ID，算法必须能够根据GPU ID来使用特定的GPU；
      - `draw_roi_area`：`true`或者`false`，是否在输出图中绘制`roi`分析区域；
@@ -298,7 +298,7 @@ make install
      - `object_text_color`：检测框顶部文字的颜色，以BGRA表示的数组，如`[0, 255, 0, 0]`，参考[model/README.md](model/README.md)；
      - `object_text_bg_color`：检测框顶部文字的背景颜色，以BGRA表示的数组，如`[0, 255, 0, 0]`，参考[model/README.md](model/README.md)；
      - 所有`json`内的键名称必须是小写字母，并且单词间以下划线分隔，如上面几个示例。
-   - **必须支持参数实时更新**。除了`gpu_id`等必须在算法初始化时才能够更新的参数外，其他可配置参数必须支持能够在调用`ji_calc_frame`、`ji_calc_buffer`、`ji_calc_file`、`ji_calc_video_file`四个接口时，进行实时更新。也就是必须要在`ji_calc_*`等接口的`args`参数中，加入这些可配置项。
+   - **必须支持参数实时更新**。除了`gpu_id`等必须在算法初始化时才能够更新的参数外，所有`/usr/local/ev_sdk/config/algo_config.json`内的可配置参数必须支持能够在调用`ji_calc_frame`、`ji_calc_buffer`、`ji_calc_file`、`ji_calc_video_file`四个接口时，进行实时更新。也就是必须要在`ji_calc_*`等接口的`args`参数中，加入这些可配置项。
 
 5. 算法输出规范要求
 
@@ -311,9 +311,10 @@ make install
    * 最终编译生成的`libji.so`必须自行链接必要的库，`test-ji-api`不会链接除`/usr/local/ev_sdk/lib/libji.so`以外的算法依赖库；
    * 如果`libji.so`依赖了系统动态库搜索路径（如`/usr/lib`，`/lib`等）以外的库，必须将其安装到`/usr/local/ev_sdk/lib`下，可以使用`ldd /usr/local/ev_sdk/lib/libji.so`查看`libji.so`是否正确链接了所有的依赖库。
    * **务必删除源代码和授权文件**
-     * 第一次提交算法时，请将生成的私钥`privateKey.pem`和公钥`publicKey.pem`放到`/usr/local/ev_sdk/bin`下。**并请自行保存一份，后续算法迭代过程都会使用第一次提交的公私钥，不能重新生成**。并且后续提交必须将这两个文件都删除。
+     * 第一次提交算法时，请将生成的私钥`privateKey.pem`和公钥`publicKey.pem`放到`/usr/local/ev_sdk/authorization`下。**并请自行保存一份，后续算法迭代过程都会使用第一次提交的公私钥，不能重新生成**。并且后续提交必须将这两个文件都删除。
      * 删除`/usr/local/ev_sdk/src/`下的C&C++源代码；
      * 将算法封装成`EV_SDK`接口的`libji.so`之后，请把`/usr/local/ev_sdk/include/model_str.hpp`和`/usr/local/ev_sdk/include/pubKey.hpp`删除；
+     * 删除生成`model_str.hpp`文件的原始文件；
 
 
 ## FAQ

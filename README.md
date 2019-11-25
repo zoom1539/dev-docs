@@ -30,7 +30,8 @@ ev_sdk
 |-- README.md	# 本说明文件
 |-- model			# 模型数据存放文件夹
 |-- config		# 程序配置目录
-|		`--algo_config.json	# 程序配置文件
+|   |-- README.md	# algo_config.json文件各个参数的说明和配置方法
+|		`-- algo_config.json	# 程序配置文件
 |-- doc
 |-- include         # 库头文件目录
 |   `-- ji.h        # libji.so的头文件，理论上仅有唯一一个头文件
@@ -79,7 +80,7 @@ make install
 2. 使用`test-ji-api`测试`ji_calc_frame`接口，测试添加了一个`ROI`参数
 
    ```shell
-   /usr/local/ev_sdk/bin/test-ji-api -f ji_calc_frame -i /usr/local/ev_sdk/data/dog.jpg -o /tmp/output.jpg -l /usr/local/ev_sdk/build/license.txt -a "{\"roi\":[\"POLYGON((0.21666666666666667 0.255,0.6924242424242424 0.1375,0.8833333333333333 0.72,0.4106060606060606 0.965,0.048484848484848485 0.82,0.2196969696969697 0.2575))\"]}"
+   /usr/local/ev_sdk/bin/test-ji-api -f ji_calc_frame -i /usr/local/ev_sdk/data/dog.jpg -o /tmp/output.jpg -l /usr/local/ev_sdk/authorization/license.txt -a "{\"roi\":[\"POLYGON((0.21666666666666667 0.255,0.6924242424242424 0.1375,0.8833333333333333 0.72,0.4106060606060606 0.965,0.048484848484848485 0.82,0.2196969696969697 0.2575))\"]}"
    ```
 
    输出内容样例：

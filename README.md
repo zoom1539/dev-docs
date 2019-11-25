@@ -27,7 +27,10 @@ ev_sdk
 |   |-- darknet							# 示例项目依赖的库
 |   `-- license             # SDK授权库及相关工具
 |-- CMakeLists.txt          # 本项目的cmake构建文件
-|-- README.md
+|-- README.md	# 本说明文件
+|-- model			# 模型数据存放文件夹
+|-- config		# 程序配置目录
+|		`--algo_config.json	# 程序配置文件
 |-- doc
 |-- include         # 库头文件目录
 |   `-- ji.h        # libji.so的头文件，理论上仅有唯一一个头文件
@@ -256,6 +259,8 @@ make install
    
      例如，如果项目需要支持在`args`中传入`roi`参数，使得算法只对`roi`区域进行分析，那么**算法内部必须实现只针对`roi`区域进行分析的功能**；
    
+   - 对于接口`ji_calc_video`接口，其保存的`json`文件格式必须与`ji_calc_frame`、`ji_calc_file`、`ji_calc_buffer`中的`JI_EVENT.json`格式保持一致；
+   
    - 通常输出图片中需要画`roi`区域、目标框等，请确保这一功能正常，包括但不仅限于：
    
      - `args`中输入的`roi`需要支持多边形
@@ -291,12 +296,9 @@ make install
      - `roi_fill`：是否使用颜色填充ROI区域；
      - `roi_color`：`roi`框的颜色，以BGRA表示的数组，如`[0, 255, 0, 0]`，参考[model/README.md](model/README.md)；
      - `roi`：针对图片的感兴趣区域进行分析，如果没有此参数或者此参数解析错误，则roi默认值为整张图片区域；
-     - ` thresh`：算法阈值，需要有可以调整算法灵敏度、召回率、精确率的阈值参数，如果算法配置项有多个参数，请自行扩展，所有与算法效果相关并且可以变动的参数**必须**在`/usr/local/ev_sdk/modek/README.md`中提供详细的配置方法和说明（包括类型、取值范围、建议值、默认值、对算法效果的影响等）；
+     - ` thresh`：算法阈值，需要有可以调整算法灵敏度、召回率、精确率的阈值参数，如果算法配置项有多个参数，请自行扩展，所有与算法效果相关并且可以变动的参数**必须**在`/usr/local/ev_sdk/config/README.md`中提供详细的配置方法和说明（包括类型、取值范围、建议值、默认值、对算法效果的影响等）；
      - ` draw_result`：`true`或者`false`，是否绘制分析结果，比如示例程序中，如果检测到狗，是否将检测框和文字画在输出图中；
-     - `draw_confidence`：`true`或者`false`，是否将置信度画在检测框顶部；
-     - `obj_rect_color`：BGRA格式，参考[model/README.md](model/README.md)，所检测目标框的颜色，如果有多个目标的颜色不同，需要自行定义，例如红色安全帽和白色安全帽：`red_hat_rect_color`、`white_hat_rect_color`；
-     - `object_text_color`：检测框顶部文字的颜色，以BGRA表示的数组，如`[0, 255, 0, 0]`，参考[model/README.md](model/README.md)；
-     - `object_text_bg_color`：检测框顶部文字的背景颜色，以BGRA表示的数组，如`[0, 255, 0, 0]`，参考[model/README.md](model/README.md)；
+     - `draw_confidence`：`true`或者`false`，是否将置信度画在检测框顶部，小数点后保留两位；
      - 所有`json`内的键名称必须是小写字母，并且单词间以下划线分隔，如上面几个示例。
    - **必须支持参数实时更新**。除了`gpu_id`等必须在算法初始化时才能够更新的参数外，所有`/usr/local/ev_sdk/config/algo_config.json`内的可配置参数必须支持能够在调用`ji_calc_frame`、`ji_calc_buffer`、`ji_calc_file`、`ji_calc_video_file`四个接口时，进行实时更新。也就是必须要在`ji_calc_*`等接口的`args`参数中，加入这些可配置项。
 
@@ -310,11 +312,8 @@ make install
    * 与模型相关的文件必须存放在`/usr/local/ev_sdk/model`目录下，例如权重文件、目标检测通常需要的名称文件`coco.names`等。
    * 最终编译生成的`libji.so`必须自行链接必要的库，`test-ji-api`不会链接除`/usr/local/ev_sdk/lib/libji.so`以外的算法依赖库；
    * 如果`libji.so`依赖了系统动态库搜索路径（如`/usr/lib`，`/lib`等）以外的库，必须将其安装到`/usr/local/ev_sdk/lib`下，可以使用`ldd /usr/local/ev_sdk/lib/libji.so`查看`libji.so`是否正确链接了所有的依赖库。
-   * **务必删除源代码和授权文件**
-     * 第一次提交算法时，请将生成的私钥`privateKey.pem`和公钥`publicKey.pem`放到`/usr/local/ev_sdk/authorization`下。**并请自行保存一份，后续算法迭代过程都会使用第一次提交的公私钥，不能重新生成**。并且后续提交必须将这两个文件都删除。
-     * 删除`/usr/local/ev_sdk/src/`下的C&C++源代码；
-     * 将算法封装成`EV_SDK`接口的`libji.so`之后，请把`/usr/local/ev_sdk/include/model_str.hpp`和`/usr/local/ev_sdk/include/pubKey.hpp`删除；
-     * 删除生成`model_str.hpp`文件的原始文件；
+   * **授权文件位置**
+     * 请务必将生成的私钥`privateKey.pem`和公钥`publicKey.pem`放到`/usr/local/ev_sdk/authorization`下。**并请自行保存一份，后续算法迭代过程都会使用第一次提交的公私钥，不能重新生成**。
 
 
 ## FAQ
@@ -330,6 +329,11 @@ make install
         "POLYGON((0.0480.357,0.1660.0725,0.3930.0075,0.3920.202,0.2420.375))",
         "POLYGON((0.5130.232,0.790.1075,0.9280.102,0.9530.64,0.7590.89,0.510.245))",
         "POLYGON((0.1150.497,0.5920.82,0.5810.917,0.140.932))"
+    ],
+    "cross_line": ["LINESTRING(0.070.21,0.360.245,0.580.16,0.970.27)"],
+    "point": [
+            "POINT(0.38 0.10)",
+            "POINT(0.47 0.41)"
     ]
 }
 ```

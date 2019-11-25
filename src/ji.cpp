@@ -357,7 +357,7 @@ int processMat(SampleDetector *detector, const cv::Mat &inFrame, const char* arg
                 ss << dogRectText;
                 if (drawConfidence) {
                     ss.precision(2);
-                    ss << std::fixed << ": " << object.prob * 100 << "%";
+                    ss << std::fixed << (dogRectText.empty() ? "" : ": ") << object.prob * 100 << "%";
                 }
                 drawRectAndText(outFrame, object.rect, ss.str(), dogRectLineThickness, cv::LINE_AA,
                         cv::Scalar(dogRectColor[0], dogRectColor[1], dogRectColor[2]), dogRectColor[3], dogTextHeight,

@@ -12,7 +12,7 @@
 
    ![POLYGON](https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/SFA_Polygon.svg/102px-SFA_Polygon.svg.png)
 
-WKT格式的具体定义请参考[WKT 格式定义](https://en.wikipedia.org/wiki/Well-known_text_representation_of_geometry)。
+WKT格式的具体定义请参考[WKT格式](./WKT_format.pdf)、[WKT 格式定义](https://en.wikipedia.org/wiki/Well-known_text_representation_of_geometry)、[WKT示例](https://www.mysqlzh.com/doc/175/141.html)。
 
 ## 使用方法
 `WKTParser`初始化时需要提供一个图像尺寸`(width, height)`，用于反归一化坐标，使得`args`中的ROI支持多种不同尺寸的图片。

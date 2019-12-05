@@ -88,7 +88,7 @@ void getBGRAColor(COLOR_BGRA_TYPE &color, cJSON *rgbArr) {
 }
 
 /**
- * 当输入尺寸更新ROI
+ * 当输入图片尺寸变更时，更新ROI
  **/
 void onInFrameSizeChanged(int newWidth, int newHeight) {
     LOG(INFO) << "on input frame size changed:(" << newWidth << ", " << newHeight << ")";
@@ -313,7 +313,7 @@ int processMat(SampleDetector *detector, const cv::Mat &inFrame, const char* arg
     // 算法处理
     for (auto &roiRect : currentROIRects) {
         LOG(WARNING) << "current roi:" << roiRect;
-        // Fix darknet save_image bug, image width and height should be divisible by 10
+        // Fix darknet save_image bug, image width and height should be divisible by 2
         if (roiRect.width % 2 != 0) {
             roiRect.width -= 1;
         }

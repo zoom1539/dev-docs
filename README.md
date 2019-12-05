@@ -20,23 +20,23 @@
 
 ```
 ev_sdk
-|-- 3rd     # 第三方源码或库目录，发布时请删除
-|   |-- wkt_parser # 针对使用WKT格式编写的字符串的解析器
+|-- 3rd             # 第三方源码或库目录，发布时请删除
+|   |-- wkt_parser          # 针对使用WKT格式编写的字符串的解析器
 |   |-- cJSON               # c版json库，简单易用
 |   |-- ev_encrypt_module  	# 模型加密库及相关工具
-|   |-- darknet							# 示例项目依赖的库
+|   |-- darknet				# 示例项目依赖的库
 |   `-- license             # SDK授权库及相关工具
 |-- CMakeLists.txt          # 本项目的cmake构建文件
-|-- README.md	# 本说明文件
+|-- README.md	    # 本说明文件
 |-- model			# 模型数据存放文件夹
-|-- config		# 程序配置目录
+|-- config		    # 程序配置目录
 |   |-- README.md	# algo_config.json文件各个参数的说明和配置方法
-|		`-- algo_config.json	# 程序配置文件
+|	`-- algo_config.json	# 程序配置文件
 |-- doc
 |-- include         # 库头文件目录
 |   `-- ji.h        # libji.so的头文件，理论上仅有唯一一个头文件
 |-- lib             # 本项目编译并安装之后，默认会将依赖的库放在该目录，包括libji.so
-|-- src							# 实现ji.cpp的代码
+|-- src				# 实现ji.cpp的代码
 `-- test            # 针对ji.h中所定义接口的测试代码，请勿修改！！！
 ```
 ## 使用示例

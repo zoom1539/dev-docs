@@ -19,6 +19,8 @@
    - `object_text_bg_color`：目标框顶部文字的背景颜色，BGRA浮点型数组格式，BGR三通道的范围是`[0,255]`，第四个元素不使用，默认：`[50, 50, 50, 0]`
    - `object_text_size`：目标框顶部文字大小，整形，范围`[1,50]`，默认：`30`
    - `draw_warning_text`：是否画报警信息文字，`true`是，`false`否，默认：`true`
+   - `mark_text_en`：目标文字（英文），默认：`dog`
+   - `mark_text_zh`：目标文字（中文），默认：`狗`
    - `warning_text_en`：报警文字（英文），默认：`WARNING!`
    - `warning_text_zh`：报警文字（中文），默认：`警告！`
    - `warning_text_size`：报警文字大小，范围`[1,50]`，默认:`30`
@@ -27,6 +29,7 @@
    - `warning_text_left_top`：报警文字左上角坐标，整形数组，格式：`[x, y]`，`x`的范围`[0,width]`，`y`的范围`[0,height]`，默认：`[0, 0]`
 
  ### 3. 参数实时更新功能
+ 
  所有可配置参数必须支持能够在调用`ji_calc_frame`、`ji_calc_buffer`、`ji_calc_file`、`ji_calc_video_file`四个接口时，进行实时更新。
  也就是必须要在`ji_calc_*`等接口的`args`参数中，加入这些可配置项。
 

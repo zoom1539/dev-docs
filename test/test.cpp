@@ -701,7 +701,7 @@ int main(int argc, char *argv[])
 
     // Get license version
     char *license_version = nullptr;
-    ji_get_license_version(&license_version);
+    // ji_get_license_version(&license_version);
     LOG(INFO) << "version info:"
               << "\n\tEV_SDK_VERSION: "     << EV_SDK_VERSION
               << "\n\tEV_LICENSE_VERSION: " << license_version;
@@ -823,11 +823,11 @@ int main(int argc, char *argv[])
     string l,u,a,t;
     int qps,v;
     qps = v = 0;
-    if (!read_license(strLicense,l,u,a,t,qps,v))
-    {
-        LOG(ERROR) << "[ERROR] read_license faild.";
-        return -1;
-    }
+    // if (!read_license(strLicense,l,u,a,t,qps,v))
+    // {
+    //     LOG(ERROR) << "[ERROR] read_license faild.";
+    //     return -1;
+    // }
 
     char strQps[64] = {0};
     sprintf(strQps,"%d",qps);

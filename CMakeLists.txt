@@ -1,17 +1,20 @@
 cmake_minimum_required(VERSION 3.5)
 project(ji)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_INSTALL_PREFIX "/usr/local/ev_sdk")
 set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 
 # 使用pkg-config查找必要的依赖包
-find_package(OpenCV REQUIRED)
-find_library(glog REQUIRED)
+find_package(OpenCV 3.4.15 REQUIRED PATHS /root/PLATFORM/3rdparty/opencv3415)
+find_library(glog REQUIRED PATHS /root/PLATFORM/3rdparty/glog)
 set(ENV{PKG_CONFIG_PATH} "/usr/local/ev_sdk/3rd/ev_encrypt_module/lib/pkgconfig:/usr/local/ev_sdk/3rd/license/lib/pkgconfig:ENV{PKG_CONFIG_PATH}")
 find_package(PkgConfig REQUIRED)
 pkg_search_module(EV_ENCRYPT_MODULE REQUIRED ev_encrypt_module)
 pkg_search_module(JI_LICENSE REQUIRED ji_license)
+
+set(Boost_DIR /root/PLATFORM/3rdparty/boost_1_76_0)
+set(Boost_INCLUDE_DIRS ${Boost_DIR}/include)
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/3rd/cJSON)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/3rd/wkt_parser)
@@ -19,27 +22,29 @@ set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_RPATH}:/usr/local/ev_sdk/lib")
 
 # 编译libji.so
 list(APPEND libji_SOURCES
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/ji.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/SampleDetector.cpp)
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/ji.cpp)
 add_library (${PROJECT_NAME} SHARED ${libji_SOURCES})
 target_include_directories(${PROJECT_NAME}
         PUBLIC ${OpenCV_INCLUDE_DIR}
         PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
         PUBLIC ${JI_LICENSE_INCLUDE_DIRS}
         PUBLIC ${EV_ENCRYPT_MODULE_INCLUDE_DIRS}
-        PUBLIC "/usr/local/ev_sdk/3rd/darknet/include")
+        PUBLIC ${Boost_INCLUDE_DIRS}
+        PUBLIC "/usr/local/ev_sdk/3rd/fire_extinguisher/include")
 target_link_libraries(${PROJECT_NAME}
         ${OpenCV_LIBS}
         glog
-        ${JI_LICENSE_LDFLAGS}
+        # ${JI_LICENSE_LDFLAGS}
         ${EV_ENCRYPT_MODULE_LDFLAGS}
         cjson
         WKTParser
-        "/usr/local/ev_sdk/3rd/darknet/lib/libdarknet.so"
+        "/usr/local/ev_sdk/3rd/fire_extinguisher/lib/libdetector.so"
+        "/usr/local/ev_sdk/3rd/fire_extinguisher/lib/libfire_extinguisher.so"
         )
 
 # 安装SampleDetector所依赖的libdarknet.so, 请在此处将自己依赖的库安装到/usr/local/ev_sdk/lib下
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/3rd/darknet/lib/libdarknet.so DESTINATION lib)
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/3rd/fire_extinguisher/lib/libfire_extinguisher.so DESTINATION lib)
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/3rd/fire_extinguisher/lib/libdetector.so DESTINATION lib)
 
 
 

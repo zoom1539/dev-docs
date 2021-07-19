@@ -1,7 +1,11 @@
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_FLAGS "-fext-numeric-literals ${CMAKE_CXX_FLAGS}")
-find_package(OpenCV REQUIRED)
-find_package(Boost REQUIRED)
+# find_package(OpenCV REQUIRED)
+# find_package(Boost REQUIRED)
+find_package(OpenCV 3.4.15 REQUIRED PATHS /root/PLATFORM/3rdparty/opencv3415)
+set(Boost_DIR /root/PLATFORM/3rdparty/boost_1_76_0)
+set(Boost_INCLUDE_DIRS ${Boost_DIR}/include)
+
 
 LIST(FIND CMAKE_PLATFORM_IMPLICIT_LINK_DIRECTORIES "${CMAKE_INSTALL_PREFIX}/lib" isSystemDir)
 IF("${isSystemDir}" STREQUAL "-1")
@@ -12,12 +16,12 @@ ENDIF("${isSystemDir}" STREQUAL "-1")
 add_library(WKTParser SHARED ${CMAKE_CURRENT_SOURCE_DIR}/src/WKTParser.cpp)
 target_link_libraries(WKTParser
         ${OpenCV_LIBS}
-        boost_system
-        boost_filesystem
-        boost_thread
-        boost_coroutine
-        boost_context
-        boost_regex
+        ${Boost_DIR}/lib/libboost_system.so
+        ${Boost_DIR}/lib/libboost_filesystem.so
+        ${Boost_DIR}/lib/libboost_thread.so
+        ${Boost_DIR}/lib/libboost_coroutine.so
+        ${Boost_DIR}/lib/libboost_context.so
+        ${Boost_DIR}/lib/libboost_regex.so
 )
 target_include_directories(WKTParser
         PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include

@@ -2,3 +2,13 @@ build/
 .idea
 .DS_Store
 core.*
+.vscode/settings.json
+3rd/fire_extinguisher/lib/fp16_b1.engine
+3rd/fire_extinguisher/lib/libdetector.so
+3rd/fire_extinguisher/lib/libfire_extinguisher.so
+authorization
+bin
+data/output
+data/bus.jpg
+include/pubKey.hpp
+lib

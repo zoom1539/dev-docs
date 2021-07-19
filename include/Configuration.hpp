@@ -6,9 +6,14 @@
 #include <map>
 #include <opencv2/opencv.hpp>
 #include "cJSON.h"
-#include "SampleDetector.hpp"
+// #include "SampleDetector.hpp"
 
-using ALGO_CONFIG_TYPE = typename SampleDetector::ALGO_CONFIG_TYPE;
+// using ALGO_CONFIG_TYPE = typename SampleDetector::ALGO_CONFIG_TYPE;
+typedef struct {
+        // 算法配置可选的配置参数
+        int fire_extinguisher_num;
+        int frame_num;
+} ALGO_CONFIG_TYPE;
 
 #define BGRA_CHANNEL_SIZE 4
 
@@ -36,14 +41,14 @@ struct Configuration {
     // --------------------------------- 通常需要根据需要修改 START -----------------------------------------
     // 3. 算法配置参数
     std::map<std::string, ALGO_CONFIG_TYPE> mAlgoConfigs;   // 针对不同的cid（即camera id）所对应的算法配置
-    ALGO_CONFIG_TYPE mAlgoConfigDefault = {0.6, 0.5, 0.5};     // 默认的算法配置
+    ALGO_CONFIG_TYPE mAlgoConfigDefault = {2, 40000};     // 默认的算法配置
 
     // 4. 与报警信息相关的配置
     std::string language = "en";    // 所显示文字的默认语言
     int targetRectLineThickness = 4;   // 目标框粗细
     std::map<std::string, std::string> targetRectTextMap = {    // 检测目标框顶部文字
-            {"en", "dog"},
-            {"zh", "狗"}
+            {"en", "fire_extinguisher"},
+            {"zh", "灭火器"}
     };
     COLOR_BGRA_TYPE targetRectColor = {0, 255, 0, 1.0f};      // 检测框`mark`的颜色
     COLOR_BGRA_TYPE textFgColor = {0, 0, 0, 0};         // 检测框顶部文字的颜色
@@ -192,15 +197,30 @@ struct Configuration {
 
         // -------------------------- 通常需要根据需要修改的算法配置 START ---------------------------------------
         // 针对不同的cid获取算法配置参数，如果没有cid参数，就使用默认的配置参数
-        ALGO_CONFIG_TYPE algoConfig{mAlgoConfigDefault.nms, mAlgoConfigDefault.thresh, mAlgoConfigDefault.hierThresh};
-        bool isNeedUpdateThresh = false;
-        float newThresh = algoConfig.thresh;
-        cJSON *threshObj = cJSON_GetObjectItem(confObj, "thresh");
-        if (threshObj != nullptr && threshObj->type == cJSON_Number) {
-            newThresh = threshObj->valuedouble;     // 获取默认的阈值
-            isNeedUpdateThresh = true;
-            algoConfig.thresh = newThresh;
+        ALGO_CONFIG_TYPE algoConfig{mAlgoConfigDefault.fire_extinguisher_num, mAlgoConfigDefault.frame_num};
+        
+        bool isNeedUpdateFE_num = false;
+        float newFE_num = algoConfig.fire_extinguisher_num;
+        {
+            cJSON *Obj = cJSON_GetObjectItem(confObj, "fire_extinguisher_num");
+            if (Obj != nullptr && Obj->type == cJSON_Number) {
+                newFE_num = Obj->valueint;     // 获取默认的阈值
+                isNeedUpdateFE_num = true;
+                algoConfig.fire_extinguisher_num = newFE_num;
+            }
         }
+
+        bool isNeedUpdateFrame_num = false;
+        float newFrame_num = algoConfig.frame_num;
+        {
+            cJSON *Obj = cJSON_GetObjectItem(confObj, "frame_num");
+            if (Obj != nullptr && Obj->type == cJSON_Number) {
+                newFrame_num = Obj->valueint;     // 获取默认的阈值
+                isNeedUpdateFrame_num = true;
+                algoConfig.frame_num = newFrame_num;
+            }
+        }
+
         // -------------------------- 通常需要根据需要修改的算法配置 END -----------------------------------------
 
         cJSON *cidObj = cJSON_GetObjectItem(confObj, "cid");
@@ -209,8 +229,11 @@ struct Configuration {
             if (mAlgoConfigs.find(cidObj->valuestring) == mAlgoConfigs.end()) {
                 mAlgoConfigs.emplace(std::make_pair(cidObj->valuestring, mAlgoConfigDefault));
             }
-            if (isNeedUpdateThresh) {
-                mAlgoConfigs[cidObj->valuestring].thresh = newThresh;
+            if (isNeedUpdateFE_num) {
+                mAlgoConfigs[cidObj->valuestring].fire_extinguisher_num = newFE_num;
+            }
+            if (isNeedUpdateFrame_num) {
+                mAlgoConfigs[cidObj->valuestring].frame_num = newFrame_num;
             }
             algoConfig = mAlgoConfigs[cidObj->valuestring];
         }

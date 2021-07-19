@@ -19,7 +19,8 @@
 
 #include "pubKey.hpp"
 #include "model_str.hpp"
-#include "SampleDetector.hpp"
+// #include "SampleDetector.hpp"
+#include "class_fire_extinguisher.h"
 #include "Configuration.hpp"
 
 #define JSON_ALERT_FLAG_KEY ("alert_flag")
@@ -27,9 +28,9 @@
 #define JSON_ALERT_FLAG_FALSE 0
 
 // 如果需要添加授权功能，请保留该宏定义，并在ji_init中实现授权校验
-#define ENABLE_JI_AUTHORIZATION
+// #define ENABLE_JI_AUTHORIZATION
 // 如果需要加密模型，请保留该宏定义，并在ji_create_predictor中实现模型解密
-#define ENABLE_JI_MODEL_ENCRYPTION
+// #define ENABLE_JI_MODEL_ENCRYPTION
 
 #ifndef EV_SDK_DEBUG
 #define EV_SDK_DEBUG 1
@@ -49,7 +50,7 @@ Configuration config;
  * @param[out] event 以JI_EVENT封装的处理结果
  * @return 如果处理成功，返回JISDK_RET_SUCCEED
  */
-int processMat(SampleDetector *detector, const cv::Mat &inFrame, const char* args, cv::Mat &outFrame, JI_EVENT &event) {
+int processMat(FireExtinguisher *detector, const cv::Mat &inFrame, const char* args, cv::Mat &outFrame, JI_EVENT &event) {
     // 处理输入图像
     if (inFrame.empty()) {
         return JISDK_RET_FAILED;
@@ -80,32 +81,42 @@ int processMat(SampleDetector *detector, const cv::Mat &inFrame, const char* arg
      * （即通过ji_calc_*等接口传入）
      */
     ALGO_CONFIG_TYPE algoConfig = config.parseAndUpdateArgs(args);
-    detector->setThresh(algoConfig.thresh);
+    // detector->setThresh(algoConfig.thresh);
 
-    // 针对每个ROI进行算法处理
-    std::vector<SampleDetector::Object> detectedObjects;
-    std::vector<SampleDetector::Object> validTargets;
+    // // 针对每个ROI进行算法处理
+    // std::vector<SampleDetector::Object> detectedObjects;
+    // std::vector<SampleDetector::Object> validTargets;
 
-    // 算法处理
-    int processRet = detector->processImage(inFrame, detectedObjects);
-    if (processRet != SampleDetector::PROCESS_OK) {
-        return JISDK_RET_FAILED;
-    }
-    for (auto &obj : detectedObjects) {
-        for (auto &roiPolygon : config.currentROIOrigPolygons) {
-            int mid_x = obj.rect.x + obj.rect.width / 2;
-            int mid_y = obj.rect.y + obj.rect.height / 2;
-            // 当检测的目标在ROI内的话，就视为有效目标
-            if (WKTParser::inPolygon(roiPolygon, cv::Point(mid_x, mid_y))) {
-                validTargets.emplace_back(obj);
-                break;
-            }
-        }
-    }
+    // // 算法处理
+    // int processRet = detector->processImage(inFrame, detectedObjects);
+    // if (processRet != SampleDetector::PROCESS_OK) {
+    //     return JISDK_RET_FAILED;
+    // }
+    // for (auto &obj : detectedObjects) {
+    //     for (auto &roiPolygon : config.currentROIOrigPolygons) {
+    //         int mid_x = obj.rect.x + obj.rect.width / 2;
+    //         int mid_y = obj.rect.y + obj.rect.height / 2;
+    //         // 当检测的目标在ROI内的话，就视为有效目标
+    //         if (WKTParser::inPolygon(roiPolygon, cv::Point(mid_x, mid_y))) {
+    //             validTargets.emplace_back(obj);
+    //             break;
+    //         }
+    //     }
+    // }
+
+    std::vector<cv::Rect> rects;
+    std::vector<float> confs;
+    AlertType alert;
+    std::cout <<"#### " << algoConfig.fire_extinguisher_num << " " << algoConfig.frame_num << std::endl;
+    detector->run(inFrame, algoConfig.fire_extinguisher_num, algoConfig.frame_num, rects, confs, alert);
 
     // 此处示例业务逻辑：当算法检测到有`dog`时，就报警
     bool isNeedAlert = false;   // 是否需要报警
-
+    if (LostFireExtinguishers == alert)
+    {
+        isNeedAlert = true;
+    }
+    
     // 创建输出图
     inFrame.copyTo(outFrame);
     // 画ROI区域
@@ -114,25 +125,42 @@ int processMat(SampleDetector *detector, const cv::Mat &inFrame, const char* arg
                 config.roiColor[3], cv::LINE_AA, config.roiLineThickness, config.roiFill);
     }
     // 判断是否要要报警并将检测到的目标画到输出图上
-    if (validTargets.size() > 0) {
-        // 如果检测到有`狗`就报警
-        isNeedAlert = true;
-    }
-    for (auto &object : validTargets) {
-        LOG(INFO) << "Found " << object.name;
+    // if (validTargets.size() > 0) {
+    //     // 如果检测到有`狗`就报警
+    //     isNeedAlert = true;
+    // }
+
+    // for (auto &object : validTargets) {
+    //     LOG(INFO) << "Found " << object.name;
+    //     if (config.drawResult) {
+    //         std::stringstream ss;
+    //         ss << config.targetRectTextMap[config.language];
+    //         if (config.drawConfidence) {
+    //             ss.precision(2);
+    //             ss << std::fixed << (config.targetRectTextMap[config.language].empty() ? "" : ": ") << object.prob * 100 << "%";
+    //         }
+    //         drawRectAndText(outFrame, object.rect, ss.str(), config.targetRectLineThickness, cv::LINE_AA,
+    //                         cv::Scalar(config.targetRectColor[0], config.targetRectColor[1], config.targetRectColor[2]), config.targetRectColor[3], config.targetTextHeight,
+    //                         cv::Scalar(config.textFgColor[0], config.textFgColor[1], config.textFgColor[2]),
+    //                         cv::Scalar(config.textBgColor[0], config.textBgColor[1], config.textBgColor[2]));
+    //     }
+    // }
+
+    for (int i = 0; i < rects.size(); i++) {
         if (config.drawResult) {
             std::stringstream ss;
             ss << config.targetRectTextMap[config.language];
             if (config.drawConfidence) {
                 ss.precision(2);
-                ss << std::fixed << (config.targetRectTextMap[config.language].empty() ? "" : ": ") << object.prob * 100 << "%";
+                ss << std::fixed << (config.targetRectTextMap[config.language].empty() ? "" : ": ") << confs[i] * 100 << "%";
             }
-            drawRectAndText(outFrame, object.rect, ss.str(), config.targetRectLineThickness, cv::LINE_AA,
+            drawRectAndText(outFrame, rects[i], ss.str(), config.targetRectLineThickness, cv::LINE_AA,
                             cv::Scalar(config.targetRectColor[0], config.targetRectColor[1], config.targetRectColor[2]), config.targetRectColor[3], config.targetTextHeight,
                             cv::Scalar(config.textFgColor[0], config.textFgColor[1], config.textFgColor[2]),
                             cv::Scalar(config.textBgColor[0], config.textBgColor[1], config.textBgColor[2]));
         }
     }
+    
 
     if (isNeedAlert && config.drawWarningText) {
         drawText(outFrame, config.warningTextMap[config.language], config.warningTextSize,
@@ -147,22 +175,22 @@ int processMat(SampleDetector *detector, const cv::Mat &inFrame, const char* arg
         jsonAlertCode = JSON_ALERT_FLAG_TRUE;
     }
     cJSON_AddItemToObject(rootObj, JSON_ALERT_FLAG_KEY, cJSON_CreateNumber(jsonAlertCode));
-    cJSON *dogsObj = cJSON_CreateArray();
-    for (auto &dog : validTargets) {
+    cJSON *FEsObj = cJSON_CreateArray();
+    for (int i = 0; i < rects.size(); i++) {
         cJSON *odbObj = cJSON_CreateObject();
-        int x = dog.rect.x;
-        int y = dog.rect.y;
-        int width = dog.rect.width;
-        int height = dog.rect.height;
+        int x = rects[i].x;
+        int y = rects[i].y;
+        int width = rects[i].width;
+        int height = rects[i].height;
         cJSON_AddItemToObject(odbObj, "x", cJSON_CreateNumber(x));
         cJSON_AddItemToObject(odbObj, "y", cJSON_CreateNumber(y));
         cJSON_AddItemToObject(odbObj, "width", cJSON_CreateNumber(width));
         cJSON_AddItemToObject(odbObj, "height", cJSON_CreateNumber(height));
-        cJSON_AddItemToObject(odbObj, "confidence", cJSON_CreateNumber(dog.prob));
+        cJSON_AddItemToObject(odbObj, "confidence", cJSON_CreateNumber(confs[i]));
 
-        cJSON_AddItemToArray(dogsObj, odbObj);
+        cJSON_AddItemToArray(FEsObj, odbObj);
     }
-    cJSON_AddItemToObject(rootObj, "dogs", dogsObj);
+    cJSON_AddItemToObject(rootObj, "fire_extinguisher", FEsObj);
 
     char *jsonResultStr = cJSON_Print(rootObj);
     int jsonSize = strlen(jsonResultStr);
@@ -202,22 +230,24 @@ void *ji_create_predictor(int pdtype) {
     const char *configFile = "/usr/local/ev_sdk/config/algo_config.json";
     LOG(INFO) << "Parsing configuration file: " << configFile;
 
-    ALGO_CONFIG_TYPE algoConfig{config.mAlgoConfigDefault.nms, config.mAlgoConfigDefault.thresh, config.mAlgoConfigDefault.hierThresh};
-    std::ifstream confIfs(configFile);
-    if (confIfs.is_open()) {
-        size_t len = getFileLen(confIfs);
-        char *confStr = new char[len + 1];
-        confIfs.read(confStr, len);
-        confStr[len] = '\0';
+    // ALGO_CONFIG_TYPE algoConfig{config.mAlgoConfigDefault.nms, config.mAlgoConfigDefault.thresh, config.mAlgoConfigDefault.hierThresh};
+    // std::ifstream confIfs(configFile);
+    // if (confIfs.is_open()) {
+    //     size_t len = getFileLen(confIfs);
+    //     char *confStr = new char[len + 1];
+    //     confIfs.read(confStr, len);
+    //     confStr[len] = '\0';
 
-        algoConfig = config.parseAndUpdateArgs(confStr);
-        config.mAlgoConfigDefault = algoConfig;
-        delete[] confStr;
-        confIfs.close();
-    }
+    //     algoConfig = config.parseAndUpdateArgs(confStr);
+    //     config.mAlgoConfigDefault = algoConfig;
+    //     delete[] confStr;
+    //     confIfs.close();
+    // }
 
-    auto *detector = new SampleDetector(algoConfig.thresh, algoConfig.nms, algoConfig.hierThresh);
-    char *decryptedModelStr = nullptr;
+
+    auto *detector = new FireExtinguisher();
+    
+    // char *decryptedModelStr = nullptr;
 
 #ifdef ENABLE_JI_MODEL_ENCRYPTION
     LOG(INFO) << "Decrypting model...";
@@ -239,22 +269,23 @@ void *ji_create_predictor(int pdtype) {
     DestroyDecrtptor(h);
 #else
     // 不使用模型加密功能，直接从模型文件读取
-    std::ifstream ifs = std::ifstream("/usr/local/ev_sdk/model/yolov3-tiny.cfg", std::ios::binary);
-    long len = getFileLen(ifs);
-    decryptedModelStr = new char[len + 1];
-    ifs.read(decryptedModelStr, len);
-    decryptedModelStr[len] = '\0';
+    // std::ifstream ifs = std::ifstream("/usr/local/ev_sdk/model/yolov3-tiny.cfg", std::ios::binary);
+    // long len = getFileLen(ifs);
+    // decryptedModelStr = new char[len + 1];
+    // ifs.read(decryptedModelStr, len);
+    // decryptedModelStr[len] = '\0';
 #endif
-
-    int iRet = detector->init("/usr/local/ev_sdk/config/coco.names",
-                              decryptedModelStr,
-                              "/usr/local/ev_sdk/model/model.dat");
-    if (decryptedModelStr != nullptr) {
-        free(decryptedModelStr);
-    }
-    if (iRet != SampleDetector::INIT_OK) {
-        return nullptr;
-    }
+    // int iRet = detector->init("/usr/local/ev_sdk/config/coco.names",
+    //                           decryptedModelStr,
+    //                           "/usr/local/ev_sdk/model/model.dat");
+    // if (decryptedModelStr != nullptr) {
+    //     free(decryptedModelStr);
+    // }
+    // if (iRet != SampleDetector::INIT_OK) {
+    //     return nullptr;
+    // }
+    std::string engine_path = "/usr/local/ev_sdk/3rd/fire_extinguisher/lib/fp16_b1.engine";
+    detector->init(engine_path);
     LOG(INFO) << "SamplePredictor init OK.";
 
     return detector;
@@ -263,8 +294,8 @@ void *ji_create_predictor(int pdtype) {
 void ji_destroy_predictor(void *predictor) {
     if (predictor == NULL) return;
 
-    auto *detector = reinterpret_cast<SampleDetector *>(predictor);
-    detector->unInit();
+    auto *detector = reinterpret_cast<FireExtinguisher *>(predictor);
+    // detector->unInit();
     delete detector;
 }
 
@@ -320,7 +351,7 @@ int ji_calc_frame(void *predictor, const JI_CV_FRAME *inFrame, const char *args,
         return JISDK_RET_INVALIDPARAMS;
     }
 
-    auto *detector = reinterpret_cast<SampleDetector *>(predictor);
+    auto *detector = reinterpret_cast<FireExtinguisher *>(predictor);
     cv::Mat inMat(inFrame->rows, inFrame->cols, inFrame->type, inFrame->data, inFrame->step);
     if (inMat.empty()) {
         return JISDK_RET_FAILED;
@@ -345,7 +376,7 @@ int ji_calc_buffer(void *predictor, const void *buffer, int length, const char *
         return JISDK_RET_INVALIDPARAMS;
     }
 
-    auto *classifierPtr = reinterpret_cast<SampleDetector *>(predictor);
+    auto *classifierPtr = reinterpret_cast<FireExtinguisher *>(predictor);
 
     const unsigned char *b = (const unsigned char *) buffer;
     std::vector<unsigned char> vecBuffer(b, b + length);
@@ -370,7 +401,7 @@ int ji_calc_file(void *predictor, const char *inFile, const char *args, const ch
         return JISDK_RET_INVALIDPARAMS;
     }
 
-    auto *classifierPtr = reinterpret_cast<SampleDetector *>(predictor);
+    auto *classifierPtr = reinterpret_cast<FireExtinguisher *>(predictor);
     cv::Mat inMat = cv::imread(inFile);
     if (inMat.empty()) {
         return JISDK_RET_FAILED;
@@ -393,7 +424,7 @@ int ji_calc_video_file(void *predictor, const char *infile, const char* args,
     if (predictor == NULL || infile == NULL) {
         return JISDK_RET_INVALIDPARAMS;
     }
-    auto *classifierPtr = reinterpret_cast<SampleDetector *>(predictor);
+    auto *classifierPtr = reinterpret_cast<FireExtinguisher *>(predictor);
 
     cv::VideoCapture videoCapture(infile);
     if (!videoCapture.isOpened()) {

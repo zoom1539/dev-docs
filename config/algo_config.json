@@ -7,8 +7,8 @@
     "roi_fill": false,
     "draw_result": true,
     "draw_confidence": true,
-    "fire_extinguisher_num":2,
-    "frame_num":40000,
+    "conf_thres":0.65,
+    "frame_num_thres":1500,
     "language": "en",
 
     "target_rect_color": [0, 255, 0, 0],

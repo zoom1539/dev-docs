@@ -24,9 +24,9 @@ line 704
 ## 主要修改的地方
 - ji.cpp
 ```
-1. processMat()
-2. ji_create_predictor()
-3. ji_destroy_predictor()
+1. ji_create_predictor()
+2. ji_destroy_predictor()
+3. processMat()
 ```
 - Configuration.hpp
 ```
@@ -37,5 +37,6 @@ line 704
 } ALGO_CONFIG_TYPE;
 
 2. // --------- 通常需要根据需要修改的算法配置 START ---------------
+3. // 多路
 ```
 

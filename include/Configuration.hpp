@@ -6,13 +6,13 @@
 #include <map>
 #include <opencv2/opencv.hpp>
 #include "cJSON.h"
-// #include "SampleDetector.hpp"
+
 
 // using ALGO_CONFIG_TYPE = typename SampleDetector::ALGO_CONFIG_TYPE;
 typedef struct {
         // 算法配置可选的配置参数
-        int fire_extinguisher_num;
-        int frame_num;
+        float conf_thres;
+        int frame_num_thres;
 } ALGO_CONFIG_TYPE;
 
 #define BGRA_CHANNEL_SIZE 4
@@ -41,13 +41,13 @@ struct Configuration {
     // --------------------------------- 通常需要根据需要修改 START -----------------------------------------
     // 3. 算法配置参数
     std::map<std::string, ALGO_CONFIG_TYPE> mAlgoConfigs;   // 针对不同的cid（即camera id）所对应的算法配置
-    ALGO_CONFIG_TYPE mAlgoConfigDefault = {2, 40000};     // 默认的算法配置
+    ALGO_CONFIG_TYPE mAlgoConfigDefault = {0.65, 1500};     // 默认的算法配置
 
     // 4. 与报警信息相关的配置
     std::string language = "en";    // 所显示文字的默认语言
     int targetRectLineThickness = 4;   // 目标框粗细
     std::map<std::string, std::string> targetRectTextMap = {    // 检测目标框顶部文字
-            {"en", "fire_extinguisher"},
+            {"en", "extinguisher"},
             {"zh", "灭火器"}
     };
     COLOR_BGRA_TYPE targetRectColor = {0, 255, 0, 1.0f};      // 检测框`mark`的颜色
@@ -197,43 +197,40 @@ struct Configuration {
 
         // -------------------------- 通常需要根据需要修改的算法配置 START ---------------------------------------
         // 针对不同的cid获取算法配置参数，如果没有cid参数，就使用默认的配置参数
-        ALGO_CONFIG_TYPE algoConfig{mAlgoConfigDefault.fire_extinguisher_num, mAlgoConfigDefault.frame_num};
+        ALGO_CONFIG_TYPE algoConfig{mAlgoConfigDefault.conf_thres, mAlgoConfigDefault.frame_num_thres};
         
-        bool isNeedUpdateFE_num = false;
-        float newFE_num = algoConfig.fire_extinguisher_num;
+        bool isNeedUpdateConf_thres = false;
         {
-            cJSON *Obj = cJSON_GetObjectItem(confObj, "fire_extinguisher_num");
+            cJSON *Obj = cJSON_GetObjectItem(confObj, "conf_thres");
             if (Obj != nullptr && Obj->type == cJSON_Number) {
-                newFE_num = Obj->valueint;     // 获取默认的阈值
-                isNeedUpdateFE_num = true;
-                algoConfig.fire_extinguisher_num = newFE_num;
+                isNeedUpdateConf_thres = true;
+                algoConfig.conf_thres = Obj->valuedouble;
             }
         }
 
-        bool isNeedUpdateFrame_num = false;
-        float newFrame_num = algoConfig.frame_num;
+        bool isNeedUpdateFrame_num_thres = false;
         {
-            cJSON *Obj = cJSON_GetObjectItem(confObj, "frame_num");
+            cJSON *Obj = cJSON_GetObjectItem(confObj, "frame_num_thres");
             if (Obj != nullptr && Obj->type == cJSON_Number) {
-                newFrame_num = Obj->valueint;     // 获取默认的阈值
-                isNeedUpdateFrame_num = true;
-                algoConfig.frame_num = newFrame_num;
+                isNeedUpdateFrame_num_thres = true;
+                algoConfig.frame_num_thres = Obj->valueint;
             }
         }
 
         // -------------------------- 通常需要根据需要修改的算法配置 END -----------------------------------------
 
+        // 多路
         cJSON *cidObj = cJSON_GetObjectItem(confObj, "cid");
         if (cidObj != nullptr && cidObj->type == cJSON_String) {
             // 如果能够找到cid，当前配置就针对对应的cid进行更改
             if (mAlgoConfigs.find(cidObj->valuestring) == mAlgoConfigs.end()) {
                 mAlgoConfigs.emplace(std::make_pair(cidObj->valuestring, mAlgoConfigDefault));
             }
-            if (isNeedUpdateFE_num) {
-                mAlgoConfigs[cidObj->valuestring].fire_extinguisher_num = newFE_num;
+            if (isNeedUpdateConf_thres) {
+                mAlgoConfigs[cidObj->valuestring].conf_thres = algoConfig.conf_thres;
             }
-            if (isNeedUpdateFrame_num) {
-                mAlgoConfigs[cidObj->valuestring].frame_num = newFrame_num;
+            if (isNeedUpdateFrame_num_thres) {
+                mAlgoConfigs[cidObj->valuestring].frame_num_thres = algoConfig.frame_num_thres;
             }
             algoConfig = mAlgoConfigs[cidObj->valuestring];
         }

@@ -19,7 +19,6 @@
 
 #include "pubKey.hpp"
 #include "model_str.hpp"
-// #include "SampleDetector.hpp"
 #include "class_fire_extinguisher.h"
 #include "Configuration.hpp"
 
@@ -28,7 +27,7 @@
 #define JSON_ALERT_FLAG_FALSE 0
 
 // 如果需要添加授权功能，请保留该宏定义，并在ji_init中实现授权校验
-// #define ENABLE_JI_AUTHORIZATION
+#define ENABLE_JI_AUTHORIZATION
 // 如果需要加密模型，请保留该宏定义，并在ji_create_predictor中实现模型解密
 // #define ENABLE_JI_MODEL_ENCRYPTION
 
@@ -81,36 +80,26 @@ int processMat(FireExtinguisher *detector, const cv::Mat &inFrame, const char* a
      * （即通过ji_calc_*等接口传入）
      */
     ALGO_CONFIG_TYPE algoConfig = config.parseAndUpdateArgs(args);
-    // detector->setThresh(algoConfig.thresh);
 
-    // // 针对每个ROI进行算法处理
-    // std::vector<SampleDetector::Object> detectedObjects;
-    // std::vector<SampleDetector::Object> validTargets;
-
-    // // 算法处理
-    // int processRet = detector->processImage(inFrame, detectedObjects);
-    // if (processRet != SampleDetector::PROCESS_OK) {
-    //     return JISDK_RET_FAILED;
-    // }
-    // for (auto &obj : detectedObjects) {
-    //     for (auto &roiPolygon : config.currentROIOrigPolygons) {
-    //         int mid_x = obj.rect.x + obj.rect.width / 2;
-    //         int mid_y = obj.rect.y + obj.rect.height / 2;
-    //         // 当检测的目标在ROI内的话，就视为有效目标
-    //         if (WKTParser::inPolygon(roiPolygon, cv::Point(mid_x, mid_y))) {
-    //             validTargets.emplace_back(obj);
-    //             break;
-    //         }
-    //     }
-    // }
 
     std::vector<cv::Rect> rects;
     std::vector<float> confs;
     AlertType alert;
-    std::cout <<"#### " << algoConfig.fire_extinguisher_num << " " << algoConfig.frame_num << std::endl;
-    detector->run(inFrame, algoConfig.fire_extinguisher_num, algoConfig.frame_num, rects, confs, alert);
+    std::cout <<"#### " << algoConfig.conf_thres << " " << algoConfig.frame_num_thres << std::endl;
+    bool is_run = detector->run(inFrame, 
+                                algoConfig.conf_thres, 
+                                algoConfig.frame_num_thres, 
+                                config.currentROIOrigPolygons,
+                                rects, 
+                                confs, 
+                                alert);
+    if(!is_run)
+    {
+        event.code = JISDK_CODE_FAILED;
+        return JISDK_RET_FAILED;
+    }
 
-    // 此处示例业务逻辑：当算法检测到有`dog`时，就报警
+    // 此处示例业务逻辑：
     bool isNeedAlert = false;   // 是否需要报警
     if (LostFireExtinguishers == alert)
     {
@@ -124,28 +113,8 @@ int processMat(FireExtinguisher *detector, const cv::Mat &inFrame, const char* a
         drawPolygon(outFrame, config.currentROIOrigPolygons, cv::Scalar(config.roiColor[0], config.roiColor[1], config.roiColor[2]),
                 config.roiColor[3], cv::LINE_AA, config.roiLineThickness, config.roiFill);
     }
-    // 判断是否要要报警并将检测到的目标画到输出图上
-    // if (validTargets.size() > 0) {
-    //     // 如果检测到有`狗`就报警
-    //     isNeedAlert = true;
-    // }
 
-    // for (auto &object : validTargets) {
-    //     LOG(INFO) << "Found " << object.name;
-    //     if (config.drawResult) {
-    //         std::stringstream ss;
-    //         ss << config.targetRectTextMap[config.language];
-    //         if (config.drawConfidence) {
-    //             ss.precision(2);
-    //             ss << std::fixed << (config.targetRectTextMap[config.language].empty() ? "" : ": ") << object.prob * 100 << "%";
-    //         }
-    //         drawRectAndText(outFrame, object.rect, ss.str(), config.targetRectLineThickness, cv::LINE_AA,
-    //                         cv::Scalar(config.targetRectColor[0], config.targetRectColor[1], config.targetRectColor[2]), config.targetRectColor[3], config.targetTextHeight,
-    //                         cv::Scalar(config.textFgColor[0], config.textFgColor[1], config.textFgColor[2]),
-    //                         cv::Scalar(config.textBgColor[0], config.textBgColor[1], config.textBgColor[2]));
-    //     }
-    // }
-
+    // 绘制结果
     for (int i = 0; i < rects.size(); i++) {
         if (config.drawResult) {
             std::stringstream ss;
@@ -154,6 +123,12 @@ int processMat(FireExtinguisher *detector, const cv::Mat &inFrame, const char* a
                 ss.precision(2);
                 ss << std::fixed << (config.targetRectTextMap[config.language].empty() ? "" : ": ") << confs[i] * 100 << "%";
             }
+
+            //debug
+            {
+                std::cout <<"#### " << ss.str() << std::endl;
+            }
+
             drawRectAndText(outFrame, rects[i], ss.str(), config.targetRectLineThickness, cv::LINE_AA,
                             cv::Scalar(config.targetRectColor[0], config.targetRectColor[1], config.targetRectColor[2]), config.targetRectColor[3], config.targetTextHeight,
                             cv::Scalar(config.textFgColor[0], config.textFgColor[1], config.textFgColor[2]),
@@ -161,7 +136,6 @@ int processMat(FireExtinguisher *detector, const cv::Mat &inFrame, const char* a
         }
     }
     
-
     if (isNeedAlert && config.drawWarningText) {
         drawText(outFrame, config.warningTextMap[config.language], config.warningTextSize,
                  cv::Scalar(config.warningTextFg[0], config.warningTextFg[1], config.warningTextFg[2]),
@@ -275,18 +249,10 @@ void *ji_create_predictor(int pdtype) {
     // ifs.read(decryptedModelStr, len);
     // decryptedModelStr[len] = '\0';
 #endif
-    // int iRet = detector->init("/usr/local/ev_sdk/config/coco.names",
-    //                           decryptedModelStr,
-    //                           "/usr/local/ev_sdk/model/model.dat");
-    // if (decryptedModelStr != nullptr) {
-    //     free(decryptedModelStr);
-    // }
-    // if (iRet != SampleDetector::INIT_OK) {
-    //     return nullptr;
-    // }
-    std::string engine_path = "/usr/local/ev_sdk/3rd/fire_extinguisher/lib/fp16_b1.engine";
-    detector->init(engine_path);
-    LOG(INFO) << "SamplePredictor init OK.";
+    std::string wts_path = "/usr/local/ev_sdk/model/detector.wts";
+    int class_num = 1;
+    detector->init(wts_path, class_num);
+    LOG(INFO) << "ExtinguisherPredictor init OK.";
 
     return detector;
 }
@@ -372,6 +338,9 @@ int ji_calc_frame(void *predictor, const JI_CV_FRAME *inFrame, const char *args,
 
 int ji_calc_buffer(void *predictor, const void *buffer, int length, const char *args, const char *outFile,
                    JI_EVENT *event) {
+    //
+    return JISDK_RET_UNUSED;
+    //
     if (predictor == NULL || buffer == NULL || length <= 0) {
         return JISDK_RET_INVALIDPARAMS;
     }
@@ -397,6 +366,9 @@ int ji_calc_buffer(void *predictor, const void *buffer, int length, const char *
 }
 
 int ji_calc_file(void *predictor, const char *inFile, const char *args, const char *outFile, JI_EVENT *event) {
+    //
+    return JISDK_RET_UNUSED;
+    //
     if (predictor == NULL || inFile == NULL) {
         return JISDK_RET_INVALIDPARAMS;
     }
@@ -420,6 +392,8 @@ int ji_calc_file(void *predictor, const char *inFile, const char *args, const ch
 
 int ji_calc_video_file(void *predictor, const char *infile, const char* args,
                        const char *outfile, const char *jsonfile) {
+    //
+    return JISDK_RET_UNUSED;
     // 没有实现的接口必须返回`JISDK_RET_UNUSED`
     if (predictor == NULL || infile == NULL) {
         return JISDK_RET_INVALIDPARAMS;

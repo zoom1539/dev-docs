@@ -85,7 +85,6 @@ int processMat(FireExtinguisher *detector, const cv::Mat &inFrame, const char* a
     std::vector<cv::Rect> rects;
     std::vector<float> confs;
     AlertType alert;
-    std::cout <<"#### " << algoConfig.conf_thres << " " << algoConfig.frame_num_thres << std::endl;
     bool is_run = detector->run(inFrame, 
                                 algoConfig.conf_thres, 
                                 algoConfig.frame_num_thres, 
@@ -122,11 +121,6 @@ int processMat(FireExtinguisher *detector, const cv::Mat &inFrame, const char* a
             if (config.drawConfidence) {
                 ss.precision(2);
                 ss << std::fixed << (config.targetRectTextMap[config.language].empty() ? "" : ": ") << confs[i] * 100 << "%";
-            }
-
-            //debug
-            {
-                std::cout <<"#### " << ss.str() << std::endl;
             }
 
             drawRectAndText(outFrame, rects[i], ss.str(), config.targetRectLineThickness, cv::LINE_AA,
@@ -204,19 +198,19 @@ void *ji_create_predictor(int pdtype) {
     const char *configFile = "/usr/local/ev_sdk/config/algo_config.json";
     LOG(INFO) << "Parsing configuration file: " << configFile;
 
-    // ALGO_CONFIG_TYPE algoConfig{config.mAlgoConfigDefault.nms, config.mAlgoConfigDefault.thresh, config.mAlgoConfigDefault.hierThresh};
-    // std::ifstream confIfs(configFile);
-    // if (confIfs.is_open()) {
-    //     size_t len = getFileLen(confIfs);
-    //     char *confStr = new char[len + 1];
-    //     confIfs.read(confStr, len);
-    //     confStr[len] = '\0';
+    ALGO_CONFIG_TYPE algoConfig{config.mAlgoConfigDefault.conf_thres, config.mAlgoConfigDefault.frame_num_thres};
+    std::ifstream confIfs(configFile);
+    if (confIfs.is_open()) {
+        size_t len = getFileLen(confIfs);
+        char *confStr = new char[len + 1];
+        confIfs.read(confStr, len);
+        confStr[len] = '\0';
 
-    //     algoConfig = config.parseAndUpdateArgs(confStr);
-    //     config.mAlgoConfigDefault = algoConfig;
-    //     delete[] confStr;
-    //     confIfs.close();
-    // }
+        algoConfig = config.parseAndUpdateArgs(confStr);
+        config.mAlgoConfigDefault = algoConfig;
+        delete[] confStr;
+        confIfs.close();
+    }
 
 
     auto *detector = new FireExtinguisher();

@@ -39,4 +39,6 @@ line 704
 2. // --------- 通常需要根据需要修改的算法配置 START ---------------
 3. // 多路
 ```
+- algo_config.json
+- config/README.md
 

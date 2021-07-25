@@ -41,7 +41,7 @@ struct Configuration {
     // --------------------------------- 通常需要根据需要修改 START -----------------------------------------
     // 3. 算法配置参数
     std::map<std::string, ALGO_CONFIG_TYPE> mAlgoConfigs;   // 针对不同的cid（即camera id）所对应的算法配置
-    ALGO_CONFIG_TYPE mAlgoConfigDefault = {0.65, 1500};     // 默认的算法配置
+    ALGO_CONFIG_TYPE mAlgoConfigDefault = {0.555, 1500};     // 默认的算法配置
 
     // 4. 与报警信息相关的配置
     std::string language = "en";    // 所显示文字的默认语言

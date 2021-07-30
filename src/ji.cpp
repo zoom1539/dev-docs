@@ -22,7 +22,7 @@
 #include "class_fire_extinguisher.h"
 #include "Configuration.hpp"
 
-#define JSON_ALERT_FLAG_KEY ("alert_flag")
+#define JSON_ALERT_FLAG_KEY ("is_alert")
 #define JSON_ALERT_FLAG_TRUE 1
 #define JSON_ALERT_FLAG_FALSE 0
 
@@ -136,30 +136,65 @@ int processMat(FireExtinguisher *detector, const cv::Mat &inFrame, const char* a
                  cv::Scalar(config.warningTextBg[0], config.warningTextBg[1], config.warningTextBg[2]), config.warningTextLeftTop);
     }
 
+
     // 将结果封装成json字符串
+    // output
+    cJSON *algo_Obj = cJSON_CreateObject();
+    {
+        int jsonAlertCode = JSON_ALERT_FLAG_FALSE;
+        if (isNeedAlert) {
+            jsonAlertCode = JSON_ALERT_FLAG_TRUE;
+        }
+        cJSON_AddItemToObject(algo_Obj, JSON_ALERT_FLAG_KEY, cJSON_CreateBool(jsonAlertCode));
+        cJSON_AddItemToObject(algo_Obj, "target_count", cJSON_CreateNumber(rects.size()));
+        
+        cJSON *FEsObj = cJSON_CreateArray();
+        for (int i = 0; i < rects.size(); i++) 
+        {
+            cJSON *odbObj = cJSON_CreateObject();
+            int x = rects[i].x;
+            int y = rects[i].y;
+            int width = rects[i].width;
+            int height = rects[i].height;
+            cJSON_AddItemToObject(odbObj, "x", cJSON_CreateNumber(x));
+            cJSON_AddItemToObject(odbObj, "y", cJSON_CreateNumber(y));
+            cJSON_AddItemToObject(odbObj, "width", cJSON_CreateNumber(width));
+            cJSON_AddItemToObject(odbObj, "height", cJSON_CreateNumber(height));
+            cJSON_AddItemToObject(odbObj, "confidence", cJSON_CreateNumber(confs[i]));
+            cJSON_AddItemToObject(odbObj, "name", cJSON_CreateString("extinguisher"));
+
+            cJSON_AddItemToArray(FEsObj, odbObj);
+        }
+        cJSON_AddItemToObject(algo_Obj, "target_info", FEsObj);
+    }
+
+    cJSON *model_Obj = cJSON_CreateObject();
+    {
+        cJSON *FEsObj = cJSON_CreateArray();
+        for (int i = 0; i < rects.size(); i++) 
+        {
+            cJSON *odbObj = cJSON_CreateObject();
+            int x = rects[i].x;
+            int y = rects[i].y;
+            int width = rects[i].width;
+            int height = rects[i].height;
+            cJSON_AddItemToObject(odbObj, "x", cJSON_CreateNumber(x));
+            cJSON_AddItemToObject(odbObj, "y", cJSON_CreateNumber(y));
+            cJSON_AddItemToObject(odbObj, "width", cJSON_CreateNumber(width));
+            cJSON_AddItemToObject(odbObj, "height", cJSON_CreateNumber(height));
+            cJSON_AddItemToObject(odbObj, "confidence", cJSON_CreateNumber(confs[i]));
+            cJSON_AddItemToObject(odbObj, "name", cJSON_CreateString("extinguisher"));
+
+            cJSON_AddItemToArray(FEsObj, odbObj);
+        }
+        cJSON_AddItemToObject(model_Obj, "objects", FEsObj);
+    }
+
     cJSON *rootObj = cJSON_CreateObject();
-    int jsonAlertCode = JSON_ALERT_FLAG_FALSE;
-    if (isNeedAlert) {
-        jsonAlertCode = JSON_ALERT_FLAG_TRUE;
-    }
-    cJSON_AddItemToObject(rootObj, JSON_ALERT_FLAG_KEY, cJSON_CreateNumber(jsonAlertCode));
-    cJSON *FEsObj = cJSON_CreateArray();
-    for (int i = 0; i < rects.size(); i++) {
-        cJSON *odbObj = cJSON_CreateObject();
-        int x = rects[i].x;
-        int y = rects[i].y;
-        int width = rects[i].width;
-        int height = rects[i].height;
-        cJSON_AddItemToObject(odbObj, "x", cJSON_CreateNumber(x));
-        cJSON_AddItemToObject(odbObj, "y", cJSON_CreateNumber(y));
-        cJSON_AddItemToObject(odbObj, "width", cJSON_CreateNumber(width));
-        cJSON_AddItemToObject(odbObj, "height", cJSON_CreateNumber(height));
-        cJSON_AddItemToObject(odbObj, "confidence", cJSON_CreateNumber(confs[i]));
+    cJSON_AddItemToObject(rootObj, "algorithm_data", algo_Obj);
+    cJSON_AddItemToObject(rootObj, "model_data", model_Obj);
 
-        cJSON_AddItemToArray(FEsObj, odbObj);
-    }
-    cJSON_AddItemToObject(rootObj, "fire_extinguisher", FEsObj);
-
+    //
     char *jsonResultStr = cJSON_Print(rootObj);
     int jsonSize = strlen(jsonResultStr);
     if (jsonResult == nullptr) {
@@ -183,6 +218,7 @@ int processMat(FireExtinguisher *detector, const cv::Mat &inFrame, const char* a
     if (jsonResultStr)
         free(jsonResultStr);
 
+    //
     return JISDK_RET_SUCCEED;
 }
 

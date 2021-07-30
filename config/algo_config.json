@@ -8,7 +8,7 @@
     "draw_result": true,
     "draw_confidence": true,
     "conf_thres":0.555,
-    "frame_num_thres":1500,
+    "frame_num_thres":1,
     "language": "en",
 
     "target_rect_color": [0, 255, 0, 0],

@@ -369,8 +369,6 @@ int ji_calc_frame(void *predictor, const JI_CV_FRAME *inFrame, const char *args,
 int ji_calc_buffer(void *predictor, const void *buffer, int length, const char *args, const char *outFile,
                    JI_EVENT *event) {
     //
-    return JISDK_RET_UNUSED;
-    //
     if (predictor == NULL || buffer == NULL || length <= 0) {
         return JISDK_RET_INVALIDPARAMS;
     }
@@ -397,8 +395,6 @@ int ji_calc_buffer(void *predictor, const void *buffer, int length, const char *
 
 int ji_calc_file(void *predictor, const char *inFile, const char *args, const char *outFile, JI_EVENT *event) {
     //
-    return JISDK_RET_UNUSED;
-    //
     if (predictor == NULL || inFile == NULL) {
         return JISDK_RET_INVALIDPARAMS;
     }
@@ -422,8 +418,6 @@ int ji_calc_file(void *predictor, const char *inFile, const char *args, const ch
 
 int ji_calc_video_file(void *predictor, const char *infile, const char* args,
                        const char *outfile, const char *jsonfile) {
-    //
-    return JISDK_RET_UNUSED;
     // 没有实现的接口必须返回`JISDK_RET_UNUSED`
     if (predictor == NULL || infile == NULL) {
         return JISDK_RET_INVALIDPARAMS;
